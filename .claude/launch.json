@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cat-tracker",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4179", "--directory", "/Users/tanshi/Desktop/cat-tracker"],
+      "port": 4179
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAT 2026 Performance OS</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div class="logo">26</div>
+      <div class="title">
+        <h1>CAT 2026 Performance OS</h1>
+        <p>Consistent actions create consistent results.</p>
+      </div>
+      <div class="spacer"></div>
+      <div class="top-actions">
+        <button class="btn" data-act="export">⬇ Export</button>
+        <button class="btn" data-act="import">⬆ Import</button>
+        <button class="btn danger" data-act="reset">Reset</button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="today">Today</button>
+      <button class="tab" data-tab="study">Study</button>
+      <button class="tab" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="reports">Reports</button>
+    </nav>
+
+    <main id="view"></main>
+
+    <footer class="footer">CAT 2026 Performance OS · all data stays in your browser (localStorage) · Export regularly</footer>
+  </div>
+
+  <input type="file" id="importFile" accept="application/json" style="display:none">
+  <div id="toast"></div>
+
+  <script src="foods.js"></script>
+  <script src="core.js"></script>
+  <script src="charts.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
