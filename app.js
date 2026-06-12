@@ -150,15 +150,19 @@
           <div class="suggest" id="foodSuggest" style="display:none"></div>
         </div>
         <div class="mt12">
-          ${r.foods.length ? MEALS.concat([{ id: "other", name: "Other" }]).map((m) => {
+          ${r.foods.length ? `<div class="food-row food-head"><span>Food</span><span>Quantity</span><span>Kcal</span><span>Protein</span><span></span></div>` +
+          MEALS.concat([{ id: "other", name: "Other" }]).map((m) => {
             const items = r.foods.map((f, i) => ({ f, i })).filter(({ f }) => (f.meal || "other") === m.id);
             if (!items.length) return "";
             const mc = Math.round(items.reduce((a, { f }) => a + f.cal, 0));
             const mp = Math.round(items.reduce((a, { f }) => a + f.p, 0) * 10) / 10;
-            return `<div class="row" style="border-top:none;padding-bottom:2px"><span class="hint" style="font-weight:700;text-transform:uppercase;letter-spacing:.05em">${m.name}</span><span class="hint">${mc} kcal · ${mp}g</span></div>
-              ${items.map(({ f, i }) => `<div class="food-item">
-                <span class="nm">${esc(f.name)} <span class="mc">× ${f.qty} ${esc(f.unit)}</span></span>
-                <span class="mc">${Math.round(f.cal)} kcal · ${Math.round(f.p * 10) / 10}g <button class="del" data-act="food:del:${i}">remove</button></span>
+            return `<div class="row" style="padding-bottom:2px"><span class="hint" style="font-weight:700;text-transform:uppercase;letter-spacing:.05em">${m.name}</span><span class="hint">${mc} kcal · ${mp}g</span></div>
+              ${items.map(({ f, i }) => `<div class="food-row">
+                <span class="nm">${esc(f.name)}</span>
+                <span class="qtycell"><input class="input qty" type="number" min="0.25" step="0.25" value="${f.qty}" data-act="food:qty:${i}"><span class="mc">${esc(f.unit)}</span></span>
+                <span class="mc num">${Math.round(f.cal)}</span>
+                <span class="mc num">${Math.round(f.p * 10) / 10}g</span>
+                <button class="del" data-act="food:del:${i}">remove</button>
               </div>`).join("")}`;
           }).join("") : `<div class="empty">Nothing logged yet today</div>`}
         </div>
@@ -481,6 +485,7 @@
 
   // --------------------------------------------------------------- RENDER ---
   function render() {
+    const y = window.scrollY; // re-rendering must never move the page
     const view = document.getElementById("view");
     document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === UI.tab));
     view.innerHTML = UI.tab === "today" ? renderToday()
@@ -488,6 +493,7 @@
       : UI.tab === "dashboard" ? renderDashboard()
       : renderReports();
     if (UI.tab === "today") wireFoodInput();
+    window.scrollTo(0, y);
   }
 
   // ------------------------------------------------------------ FOOD INPUT --
@@ -506,8 +512,12 @@
     };
     inp.addEventListener("input", update);
     inp.addEventListener("keydown", (e) => { if (e.key === "Enter") commitFood(); });
-    inp.focus();
-    if (UI.foodQuery) { inp.setSelectionRange(inp.value.length, inp.value.length); update(); }
+    // only steal focus while the user is mid-typing a food, and never scroll the page
+    if (UI.foodQuery) {
+      inp.focus({ preventScroll: true });
+      inp.setSelectionRange(inp.value.length, inp.value.length);
+      update();
+    }
   }
 
   function qtyFromInput() {
@@ -521,7 +531,7 @@
     qty = qty ?? qtyFromInput();
     const r = getDay(UI.dateKey, true);
     r.foods = r.foods || [];
-    r.foods.push({ name: food.n, qty, unit: food.u, cal: food.c * qty, p: food.p * qty, meal: UI.mealSel || defaultMeal() });
+    r.foods.push({ name: food.n, qty, unit: food.u, cal: food.c * qty, p: food.p * qty, unitCal: food.c, unitP: food.p, meal: UI.mealSel || defaultMeal() });
     setDay(UI.dateKey, { foods: r.foods });
     UI.foodQuery = "";
     render();
@@ -539,7 +549,7 @@
       if (hit) {
         const r = getDay(UI.dateKey, true);
         r.foods = r.foods || [];
-        r.foods.push({ name: hit.food.n, qty: hit.qty, unit: hit.food.u, cal: hit.food.c * hit.qty, p: hit.food.p * hit.qty, meal: UI.mealSel || defaultMeal() });
+        r.foods.push({ name: hit.food.n, qty: hit.qty, unit: hit.food.u, cal: hit.food.c * hit.qty, p: hit.food.p * hit.qty, unitCal: hit.food.c, unitP: hit.food.p, meal: UI.mealSel || defaultMeal() });
         setDay(UI.dateKey, { foods: r.foods });
         added++;
       } else failed.push(p);
@@ -551,7 +561,7 @@
         const pro = parseFloat(prompt(`Protein (g) for "${p}":`) || "0") || 0;
         const r = getDay(UI.dateKey, true);
         r.foods = r.foods || [];
-        r.foods.push({ name: p, qty: 1, unit: "serving", cal, p: pro, meal: UI.mealSel || defaultMeal() });
+        r.foods.push({ name: p, qty: 1, unit: "serving", cal, p: pro, unitCal: cal, unitP: pro, meal: UI.mealSel || defaultMeal() });
         setDay(UI.dateKey, { foods: r.foods });
         added++;
       }
@@ -667,6 +677,18 @@
     if (el.matches('input[type=date][data-act="date:set"]') && el.value) { UI.dateKey = el.value; render(); }
     if (el.matches('[data-act="gym:cal"]')) setDay(UI.dateKey, { gymCal: parseInt(el.value, 10) || null });
     if (el.matches('[data-act="gym:type"]')) { setDay(UI.dateKey, { gymType: el.value || null }); render(); }
+    if (el.matches('[data-act^="food:qty:"]')) {
+      const i = Number(el.dataset.act.split(":")[2]);
+      const foods = (day().foods || []).slice();
+      const f = foods[i];
+      if (f) {
+        const q = Math.max(0.1, parseFloat(el.value) || f.qty);
+        const uc = f.unitCal ?? f.cal / f.qty, up = f.unitP ?? f.p / f.qty;
+        foods[i] = { ...f, qty: q, cal: uc * q, p: up * q, unitCal: uc, unitP: up };
+        setDay(UI.dateKey, { foods });
+        render();
+      }
+    }
     if (el.matches('[data-act="vocab:pages"]')) { setDay(UI.dateKey, { vocabPages: Math.max(0, parseInt(el.value, 10) || 0) }); render(); }
     if (el.id === "importFile" && el.files[0]) {
       const fr = new FileReader();

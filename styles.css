@@ -93,26 +93,24 @@ input, select { font: inherit; color: inherit; }
   background: linear-gradient(120deg, #fdf3e9, #fdf0f5 50%, #f0f2fe); }
 .mascot-svg { width: 124px; height: auto; display: block; overflow: visible; }
 
-/* ---- Blob animations ---- */
-.mascot-svg .bun, .mascot-svg .m-prop, .mascot-svg .m-tongue { transform-box: view-box; }
-.mascot-svg .bun { animation: bun-bob 3.4s ease-in-out infinite; transform-origin: 85px 170px; }
-@keyframes bun-bob { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.967) translateY(-1px); } }
+/* ---- Bun animations ---- */
+.mascot-svg .bun, .mascot-svg .m-earL, .mascot-svg .m-earR, .mascot-svg .m-thumb { transform-box: view-box; }
+.mascot-svg .bun { animation: bun-bob 3.4s ease-in-out infinite; transform-origin: 80px 134px; }
+.mascot-svg .m-earL { animation: ear-wig 3.4s ease-in-out infinite; transform-origin: 60px 58px; }
+.mascot-svg .m-earR { animation: ear-wig 3.4s ease-in-out infinite .25s; transform-origin: 100px 58px; }
+@keyframes bun-bob { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.965) translateY(-1px); } }
+@keyframes ear-wig { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(3.5deg); } }
 
 .mood-great .bun { animation: bun-bounce 1.7s cubic-bezier(.36,.07,.19,.97) infinite; }
 @keyframes bun-bounce { 0%, 100% { transform: translateY(0); } 28% { transform: translateY(-9px); }
   48% { transform: translateY(0) scaleY(.95); } 62% { transform: translateY(-4px); } 78% { transform: translateY(0); } }
+.mood-great .m-thumb { transform-origin: 127px 96px; animation: thumb-pump 1.7s ease-in-out infinite; }
+@keyframes thumb-pump { 0%, 100% { transform: rotate(0deg); } 30% { transform: rotate(-10deg); } 55% { transform: rotate(4deg); } }
 .m-spark { transform-box: fill-box; transform-origin: center; animation: spark 1.6s ease-in-out infinite; }
 .m-spark.s2 { animation-delay: .35s; } .m-spark.s3 { animation-delay: .7s; }
 @keyframes spark { 0%, 100% { transform: scale(.55); opacity: .35; } 50% { transform: scale(1.15); opacity: 1; } }
 
-.mood-happy .m-tongue { transform-origin: 88px 113px; animation: tongue-wag 1.8s ease-in-out infinite; }
-@keyframes tongue-wag { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.8) rotate(-3deg); } }
-
-.m-dots circle { animation: dots-fade 1.8s ease-in-out infinite; }
-.m-dots .d2 { animation-delay: .3s; } .m-dots .d3 { animation-delay: .6s; }
-@keyframes dots-fade { 0%, 100% { opacity: .15; } 50% { opacity: 1; } }
-
-.mood-sad .bun { animation: bun-sway 4.2s ease-in-out infinite; transform-origin: 85px 170px; }
+.mood-sad .bun { animation: bun-sway 4.2s ease-in-out infinite; transform-origin: 80px 134px; }
 @keyframes bun-sway { 0%, 100% { transform: rotate(-1.6deg); } 50% { transform: rotate(1.6deg); } }
 .m-tear { animation: tear-fall 2.3s ease-in infinite; }
 @keyframes tear-fall { 0% { transform: translateY(0); opacity: 0; } 22% { opacity: 1; }
@@ -122,9 +120,6 @@ input, select { font: inherit; color: inherit; }
 @keyframes bun-shake { 0%, 14%, 100% { transform: translateX(0); }
   2% { transform: translateX(-2.5px) rotate(-1deg); } 5% { transform: translateX(2.5px) rotate(1deg); }
   8% { transform: translateX(-2px); } 11% { transform: translateX(2px); } }
-.m-prop { transform-origin: 135px 156px; animation: prop-waggle 2.9s ease-in-out infinite; }
-@keyframes prop-waggle { 0%, 14%, 100% { transform: rotate(0deg); }
-  3% { transform: rotate(-7deg); } 7% { transform: rotate(5deg); } 11% { transform: rotate(-3deg); } }
 .m-mark { animation: mark-pulse 1.5s ease-in-out infinite; }
 @keyframes mark-pulse { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
 
@@ -194,10 +189,20 @@ input, select { font: inherit; color: inherit; }
 .suggest .macro { color: var(--muted); font-size: 12px; }
 .food-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; font-size: 13px; border-top: 1px solid var(--line); }
 .food-item:first-child { border-top: none; }
-.food-item .nm { font-weight: 500; }
-.food-item .mc { color: var(--muted); font-size: 12px; }
-.food-item .del { color: var(--muted); font-size: 12px; padding: 2px 6px; border-radius: 7px; }
-.food-item .del:hover { color: var(--red); background: #fdeeee; }
+.food-item .nm, .food-row .nm { font-weight: 500; }
+.food-item .mc, .food-row .mc { color: var(--muted); font-size: 12px; }
+.food-item .del, .food-row .del { color: var(--muted); font-size: 12px; padding: 2px 6px; border-radius: 7px; text-align: right; }
+.food-item .del:hover, .food-row .del:hover { color: var(--red); background: #fdeeee; }
+
+/* quantity-aware diet table */
+.food-row { display: grid; grid-template-columns: 1fr 118px 64px 70px 64px; gap: 8px; align-items: center;
+  padding: 5px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.food-row.food-head { border-top: none; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); font-weight: 700; padding-bottom: 1px; }
+.food-row .qtycell { display: flex; align-items: center; gap: 6px; }
+.food-row input.qty { width: 60px; padding: 4px 8px; font-size: 12.5px; }
+.food-row .num { font-variant-numeric: tabular-nums; }
+@media (max-width: 920px) { .food-row { grid-template-columns: 1fr 100px 52px 56px 58px; } }
 .totals { display: flex; gap: 14px; margin-top: 12px; }
 .totals .tot { flex: 1; }
 .totals .tot .num { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }

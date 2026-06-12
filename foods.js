@@ -61,7 +61,7 @@ window.FOODS = [
   { n: "Fish (grilled, 100g)", u: "100g", c: 150, p: 25, a: ["fish", "grilled fish"] },
   { n: "Soya chunks (50g dry)", u: "50g", c: 170, p: 26, a: ["soya", "soya chunks", "soybean", "soya bean"] },
   { n: "Sprouts (bowl)", u: "bowl", c: 120, p: 9, a: ["sprouts", "moong sprouts", "sprout salad"] },
-  { n: "Whey protein (1 scoop)", u: "scoop", c: 120, p: 24, a: ["protein shake", "whey", "protein", "whey protein", "scoop whey", "protein scoop", "shake"] },
+  { n: "Whey protein (1 scoop)", u: "scoop", c: 120, p: 15, a: ["protein shake", "whey", "protein", "whey protein", "scoop whey", "protein scoop", "shake"] },
   { n: "Protein bar", u: "bar", c: 200, p: 20, a: ["protein bar"] },
   { n: "Peanuts (30g)", u: "30g", c: 170, p: 7.5, a: ["peanuts", "groundnut", "moongfali"] },
   { n: "Almonds (10)", u: "10 pcs", c: 70, p: 2.6, a: ["almonds", "almond", "badam"] },
