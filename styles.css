@@ -91,7 +91,46 @@ input, select { font: inherit; color: inherit; }
 /* Bun the mascot */
 .mascot-card { display: flex; align-items: center; gap: 20px; margin-bottom: 16px;
   background: linear-gradient(120deg, #fdf3e9, #fdf0f5 50%, #f0f2fe); }
-.mascot-svg { width: 118px; height: auto; display: block; }
+.mascot-svg { width: 124px; height: auto; display: block; overflow: visible; }
+
+/* ---- Bun animations ---- */
+.mascot-svg .bun, .mascot-svg .m-earL, .mascot-svg .m-earR { transform-box: view-box; }
+.mascot-svg .bun { animation: bun-bob 3.4s ease-in-out infinite; transform-origin: 80px 134px; }
+.mascot-svg .m-earL { animation: ear-wig 3.4s ease-in-out infinite; transform-origin: 60px 58px; }
+.mascot-svg .m-earR { animation: ear-wig 3.4s ease-in-out infinite .25s; transform-origin: 100px 58px; }
+@keyframes bun-bob { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.965) translateY(-1px); } }
+@keyframes ear-wig { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(3.5deg); } }
+
+.mood-great .bun { animation: bun-bounce 1.7s cubic-bezier(.36,.07,.19,.97) infinite; }
+@keyframes bun-bounce { 0%, 100% { transform: translateY(0); } 28% { transform: translateY(-9px); }
+  48% { transform: translateY(0) scaleY(.95); } 62% { transform: translateY(-4px); } 78% { transform: translateY(0); } }
+.mood-great .m-thumb { transform-box: view-box; transform-origin: 127px 96px; animation: thumb-pump 1.7s ease-in-out infinite; }
+@keyframes thumb-pump { 0%, 100% { transform: rotate(0deg); } 30% { transform: rotate(-10deg); } 55% { transform: rotate(4deg); } }
+.m-spark { transform-box: fill-box; transform-origin: center; animation: spark 1.6s ease-in-out infinite; }
+.m-spark.s2 { animation-delay: .35s; } .m-spark.s3 { animation-delay: .7s; }
+@keyframes spark { 0%, 100% { transform: scale(.55); opacity: .35; } 50% { transform: scale(1.15); opacity: 1; } }
+
+.mood-sad .bun { animation: bun-sway 4.2s ease-in-out infinite; transform-origin: 80px 134px; }
+@keyframes bun-sway { 0%, 100% { transform: rotate(-1.6deg); } 50% { transform: rotate(1.6deg); } }
+.m-tear { animation: tear-fall 2.3s ease-in infinite; }
+@keyframes tear-fall { 0% { transform: translateY(0); opacity: 0; } 22% { opacity: 1; }
+  70% { transform: translateY(9px); opacity: 1; } 100% { transform: translateY(15px); opacity: 0; } }
+
+.mood-angry .bun { animation: bun-shake 2.9s linear infinite; }
+@keyframes bun-shake { 0%, 14%, 100% { transform: translateX(0); }
+  2% { transform: translateX(-2.5px) rotate(-1deg); } 5% { transform: translateX(2.5px) rotate(1deg); }
+  8% { transform: translateX(-2px); } 11% { transform: translateX(2px); } }
+.m-mark { animation: mark-pulse 1.5s ease-in-out infinite; }
+@keyframes mark-pulse { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
+
+.m-steam path { animation: steam-rise 2.6s ease-in-out infinite; }
+.m-steam path:last-child { animation-delay: .9s; }
+@keyframes steam-rise { 0% { transform: translateY(2px); opacity: 0; } 40% { opacity: .9; }
+  100% { transform: translateY(-5px); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot-svg *, .mascot-svg .bun { animation: none !important; }
+}
 .bubble { position: relative; background: #fff; border-radius: 16px; padding: 12px 18px;
   box-shadow: var(--shadow); max-width: 520px; }
 .bubble::before { content: ""; position: absolute; left: -7px; top: 50%; width: 15px; height: 15px;
