@@ -1,6 +1,6 @@
-# CAT 2026 Performance OS
+# Tanshi's 6-Month Sprint
 
-A zero-build, offline personal tracker for CAT 2026 prep plus health habits. Apple-inspired light UI, all data stays in your browser (localStorage). Export a JSON backup any time from the header.
+A zero-build, offline personal tracker for CAT 2026 prep plus overall health habits. Apple-inspired light UI, all data stays in your browser (localStorage). Export a JSON backup any time from the header.
 
 ## Run it
 
