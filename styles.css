@@ -49,9 +49,9 @@ input, select { font: inherit; color: inherit; }
 
 /* Header */
 .topbar { display: flex; align-items: center; gap: 14px; padding: 6px 2px 18px; flex-wrap: wrap; }
-.logo { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
-  background: linear-gradient(135deg, var(--indigo), var(--teal)); color: #fff; font-weight: 800; font-size: 15px;
-  box-shadow: var(--shadow); }
+.logo { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center;
+  background: #fff; box-shadow: var(--shadow); }
+.logo svg { display: block; }
 .title h1 { font-size: 21px; margin: 0; letter-spacing: -.02em; }
 .title p { margin: 0; font-size: 12.5px; color: var(--muted); }
 .topbar .spacer { flex: 1; }
@@ -93,24 +93,26 @@ input, select { font: inherit; color: inherit; }
   background: linear-gradient(120deg, #fdf3e9, #fdf0f5 50%, #f0f2fe); }
 .mascot-svg { width: 124px; height: auto; display: block; overflow: visible; }
 
-/* ---- Bun animations ---- */
-.mascot-svg .bun, .mascot-svg .m-earL, .mascot-svg .m-earR { transform-box: view-box; }
-.mascot-svg .bun { animation: bun-bob 3.4s ease-in-out infinite; transform-origin: 80px 134px; }
-.mascot-svg .m-earL { animation: ear-wig 3.4s ease-in-out infinite; transform-origin: 60px 58px; }
-.mascot-svg .m-earR { animation: ear-wig 3.4s ease-in-out infinite .25s; transform-origin: 100px 58px; }
-@keyframes bun-bob { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.965) translateY(-1px); } }
-@keyframes ear-wig { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(3.5deg); } }
+/* ---- Blob animations ---- */
+.mascot-svg .bun, .mascot-svg .m-knife, .mascot-svg .m-tongue { transform-box: view-box; }
+.mascot-svg .bun { animation: bun-bob 3.4s ease-in-out infinite; transform-origin: 85px 170px; }
+@keyframes bun-bob { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.967) translateY(-1px); } }
 
 .mood-great .bun { animation: bun-bounce 1.7s cubic-bezier(.36,.07,.19,.97) infinite; }
 @keyframes bun-bounce { 0%, 100% { transform: translateY(0); } 28% { transform: translateY(-9px); }
   48% { transform: translateY(0) scaleY(.95); } 62% { transform: translateY(-4px); } 78% { transform: translateY(0); } }
-.mood-great .m-thumb { transform-box: view-box; transform-origin: 127px 96px; animation: thumb-pump 1.7s ease-in-out infinite; }
-@keyframes thumb-pump { 0%, 100% { transform: rotate(0deg); } 30% { transform: rotate(-10deg); } 55% { transform: rotate(4deg); } }
 .m-spark { transform-box: fill-box; transform-origin: center; animation: spark 1.6s ease-in-out infinite; }
 .m-spark.s2 { animation-delay: .35s; } .m-spark.s3 { animation-delay: .7s; }
 @keyframes spark { 0%, 100% { transform: scale(.55); opacity: .35; } 50% { transform: scale(1.15); opacity: 1; } }
 
-.mood-sad .bun { animation: bun-sway 4.2s ease-in-out infinite; transform-origin: 80px 134px; }
+.mood-happy .m-tongue { transform-origin: 88px 113px; animation: tongue-wag 1.8s ease-in-out infinite; }
+@keyframes tongue-wag { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.8) rotate(-3deg); } }
+
+.m-dots circle { animation: dots-fade 1.8s ease-in-out infinite; }
+.m-dots .d2 { animation-delay: .3s; } .m-dots .d3 { animation-delay: .6s; }
+@keyframes dots-fade { 0%, 100% { opacity: .15; } 50% { opacity: 1; } }
+
+.mood-sad .bun { animation: bun-sway 4.2s ease-in-out infinite; transform-origin: 85px 170px; }
 @keyframes bun-sway { 0%, 100% { transform: rotate(-1.6deg); } 50% { transform: rotate(1.6deg); } }
 .m-tear { animation: tear-fall 2.3s ease-in infinite; }
 @keyframes tear-fall { 0% { transform: translateY(0); opacity: 0; } 22% { opacity: 1; }
@@ -120,6 +122,9 @@ input, select { font: inherit; color: inherit; }
 @keyframes bun-shake { 0%, 14%, 100% { transform: translateX(0); }
   2% { transform: translateX(-2.5px) rotate(-1deg); } 5% { transform: translateX(2.5px) rotate(1deg); }
   8% { transform: translateX(-2px); } 11% { transform: translateX(2px); } }
+.m-knife { transform-origin: 128px 60px; animation: knife-waggle 2.9s ease-in-out infinite; }
+@keyframes knife-waggle { 0%, 14%, 100% { transform: rotate(0deg); }
+  3% { transform: rotate(-7deg); } 7% { transform: rotate(5deg); } 11% { transform: rotate(-3deg); } }
 .m-mark { animation: mark-pulse 1.5s ease-in-out infinite; }
 @keyframes mark-pulse { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
 
