@@ -95,8 +95,6 @@
         <!-- tiny body + stub arms behind the giant head -->
         <path d="M57 170 L57 140 Q57 125 70 125 L100 125 Q113 125 113 140 L113 170"
           fill="#fff" stroke="${INK}" stroke-width="4.5" stroke-linecap="round"/>
-        <ellipse cx="53" cy="148" rx="8.5" ry="14" fill="#fff" stroke="${INK}" stroke-width="4" transform="rotate(14 53 148)"/>
-        <ellipse cx="117" cy="148" rx="8.5" ry="14" fill="#fff" stroke="${INK}" stroke-width="4" transform="rotate(-14 117 148)"/>
         <ellipse cx="85" cy="76" rx="59" ry="57" fill="#fff" stroke="${INK}" stroke-width="5"/>
         ${face(mood)}
         ${extras(mood)}
