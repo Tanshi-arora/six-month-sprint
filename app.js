@@ -7,13 +7,13 @@
     tab: "today",
     dateKey: fmtKey(today()),
     foodQuery: "",
-    mealSel: null,    // active meal bucket for the diet log
+    addingMeal: null, // meal currently showing its Add Food input
     weekOffset: 0,   // reports: weeks back from current
     monthOffset: 0,  // reports + dashboard: months back
     reportMode: "weekly",
   };
 
-  const GYM_CLASSES = ["Legs", "Arms and Chest", "Chest and Back", "Full Body Burn", "Yoga", "Dance Fitness"];
+  const GYM_CLASSES = ["Legs", "Arms and Chest", "Chest and Back", "Full Body", "Burn", "Yoga", "Dance Fitness"];
   const MEALS = [
     { id: "breakfast", name: "Breakfast" },
     { id: "lunch", name: "Lunch" },
@@ -40,6 +40,18 @@
     a.click();
     if (window.Backup) Backup.write(true);
   }
+  // top 6 most-logged foods across all days, for one-tap re-adding
+  function recentChips() {
+    const freq = {};
+    for (const k in S.days) for (const f of (S.days[k].foods || [])) {
+      (freq[f.name] = freq[f.name] || { n: 0, f }).n++;
+    }
+    const top = Object.values(freq).sort((a, b) => b.n - a.n).slice(0, 6);
+    UI._recent = top.map((t) => t.f);
+    if (!top.length) return "";
+    return `<div class="recent-chips">${top.map((t, j) =>
+      `<button class="chip-add" data-act="food:recent:${j}">${FoodDB.emojiFor(t.f.name)} ${esc(t.f.name)}</button>`).join("")}</div>`;
+  }
   const selDate = () => parseKey(UI.dateKey);
   const day = () => getDay(UI.dateKey, false);
   const patchDay = (p) => { setDay(UI.dateKey, p); render(); };
@@ -61,7 +73,6 @@
     const dw = Score.dilrWeek(d), rw = Score.rcWeek(d), aw = Score.aeonWeek(d);
     const calT = S.settings.calTarget, proT = S.settings.proteinTarget;
     const todaysQA = Object.entries(r.qa || {}).filter(([, n]) => n > 0);
-    const mealSel = UI.mealSel || defaultMeal();
     const bun = Mascot.assess(UI.dateKey);
 
     return `
@@ -140,42 +151,45 @@
 
       <div class="card span-3 tint-green">
         <h3><span class="dot" style="background:var(--green)"></span> Diet Log</h3>
-        <p class="sub">Targets: ${calT} kcal · ${proT}g protein <button class="iconbtn" data-act="diet:targets">edit</button>. Pick a meal, then type naturally. "rice and rajma" logs as two separate items.</p>
-        <div class="seg" style="margin-bottom:10px">
-          ${MEALS.map((m) => `<button class="${mealSel === m.id ? "on" : ""}" data-act="meal:${m.id}">${m.name}</button>`).join("")}
+        <p class="sub">Targets: ${calT} kcal · ${proT}g protein <button class="iconbtn" data-act="diet:targets">edit</button> · Diet score today: <b>${diet.score == null ? "–" : diet.score + "%"}</b></p>
+        <div class="macro-bars">
+          <div class="mb">
+            <div class="mb-head"><span>Calories · ${diet.cal} / ${calT}</span>
+              <b class="${diet.cal > calT ? "over" : ""}">${diet.cal > calT ? `${diet.cal - calT} Over` : `${calT - diet.cal} left`}</b></div>
+            <div class="dualbar">
+              <div class="seg-g" style="width:${diet.cal > calT ? (calT / diet.cal) * 100 : Math.min(100, (diet.cal / calT) * 100)}%"></div>
+              ${diet.cal > calT ? `<div class="seg-r" style="width:${((diet.cal - calT) / diet.cal) * 100}%"></div>` : ""}
+            </div>
+          </div>
+          <div class="mb">
+            <div class="mb-head"><span>Protein · ${diet.protein}g / ${proT}g</span>
+              <b style="${diet.protein >= proT ? "color:#2f9e62" : ""}">${diet.protein >= proT ? "target hit 💪" : `${Math.round((proT - diet.protein) * 10) / 10}g to go`}</b></div>
+            <div class="dualbar"><div class="seg-i" style="width:${Math.min(100, (diet.protein / proT) * 100)}%"></div></div>
+          </div>
         </div>
-        <div class="food-box field-row">
-          <input class="input" style="flex:1" id="foodInput" placeholder="Add to ${MEALS.find((m) => m.id === mealSel).name.toLowerCase()}… (2 eggs, rice and rajma)" value="${esc(UI.foodQuery)}" autocomplete="off">
-          <button class="btn primary" data-act="food:add">Add</button>
-          <div class="suggest" id="foodSuggest" style="display:none"></div>
-        </div>
-        <div class="mt12">
-          ${r.foods.length ? `<div class="food-row food-head"><span>Food</span><span>Quantity</span><span>Kcal</span><span>Protein</span><span></span></div>` +
-          MEALS.concat([{ id: "other", name: "Other" }]).map((m) => {
-            const items = r.foods.map((f, i) => ({ f, i })).filter(({ f }) => (f.meal || "other") === m.id);
-            if (!items.length) return "";
-            const mc = Math.round(items.reduce((a, { f }) => a + f.cal, 0));
-            const mp = Math.round(items.reduce((a, { f }) => a + f.p, 0) * 10) / 10;
-            return `<div class="row" style="padding-bottom:2px"><span class="hint" style="font-weight:700;text-transform:uppercase;letter-spacing:.05em">${m.name}</span><span class="hint">${mc} kcal · ${mp}g</span></div>
-              ${items.map(({ f, i }) => `<div class="food-row">
-                <span class="nm">${esc(f.name)}</span>
-                <span class="qtycell"><input class="input qty" type="number" min="0.25" step="0.25" value="${f.qty}" data-act="food:qty:${i}"><span class="mc">${esc(f.unit)}</span></span>
-                <span class="mc num">${Math.round(f.cal)}</span>
-                <span class="mc num">${Math.round(f.p * 10) / 10}g</span>
-                <button class="del" data-act="food:del:${i}">remove</button>
-              </div>`).join("")}`;
-          }).join("") : `<div class="empty">Nothing logged yet today</div>`}
-        </div>
-        <div class="totals">
-          <div class="tot"><div class="num">${diet.cal}<span class="cap"> / ${calT} kcal</span></div>
-            ${C.bar((diet.cal / calT) * 100, diet.cal > 1400 ? "var(--red)" : "var(--green)")}
-            <div class="cap mt8">${Math.max(0, calT - diet.cal)} kcal remaining</div></div>
-          <div class="tot"><div class="num">${diet.protein}<span class="cap"> / ${proT}g protein</span></div>
-            ${C.bar((diet.protein / proT) * 100, "var(--indigo)")}
-            <div class="cap mt8">${Math.max(0, Math.round((proT - diet.protein) * 10) / 10)}g to go</div></div>
-          <div class="tot"><div class="num">${diet.score == null ? "–" : diet.score + "%"}</div>
-            <div class="cap mt8">Diet score today<br>(avg of protein & calorie scores)</div></div>
-        </div>
+        ${MEALS.concat(r.foods.some((f) => (f.meal || "other") === "other") ? [{ id: "other", name: "Other" }] : []).map((m) => {
+          const items = r.foods.map((f, i) => ({ f, i })).filter(({ f }) => (f.meal || "other") === m.id);
+          const mc = Math.round(items.reduce((a, { f }) => a + f.cal, 0));
+          const mp = Math.round(items.reduce((a, { f }) => a + f.p, 0) * 10) / 10;
+          return `<div class="meal-block">
+            <div class="meal-head"><span class="meal-title">${m.name}${items.length ? `: ${mc} kcal` : ""}</span>${items.length ? `<span class="mc">${mp}g protein</span>` : ""}</div>
+            ${items.map(({ f, i }) => `<div class="food-row2">
+              <span class="f-emoji">${FoodDB.emojiFor(f.name)}</span>
+              <div><div class="nm">${esc(f.name)}</div>
+                <div class="f-sub"><input class="input qty" type="number" min="0.25" step="0.25" value="${f.qty}" data-act="food:qty:${i}"> ${esc(f.unit)}</div></div>
+              <div class="f-right"><div class="f-cal">${Math.round(f.cal)}</div><div class="f-pro">${Math.round(f.p * 10) / 10}g protein</div></div>
+              <button class="del" data-act="food:del:${i}" title="remove">✕</button>
+            </div>`).join("")}
+            ${UI.addingMeal === m.id ? `
+            <div class="food-box field-row mt8">
+              <input class="input" style="flex:1" id="foodInput" placeholder="Type food… (2 eggs, rice and rajma)" value="${esc(UI.foodQuery)}" autocomplete="off">
+              <button class="btn primary" data-act="food:add">Add</button>
+              <button class="btn ghost" data-act="meal:closeadd">✕</button>
+              <div class="suggest" id="foodSuggest" style="display:none"></div>
+            </div>
+            ${recentChips()}` : `<div class="addfood-row"><button class="addfood" data-act="meal:add:${m.id}">+ Add Food</button></div>`}
+          </div>`;
+        }).join("")}
       </div>
 
       <div class="card tint-indigo">
@@ -507,14 +521,14 @@
       const matches = q.length >= 2 ? FoodDB.searchFoods(q) : [];
       box.style.display = matches.length ? "block" : "none";
       box.innerHTML = matches.map((f, i) =>
-        `<button data-food="${i}"><span>${esc(f.n)}</span><span class="macro">${f.c} kcal · ${f.p}g / ${esc(f.u)}</span></button>`).join("");
+        `<button data-food="${i}"><span>${FoodDB.emojiFor(f.n)} ${esc(f.n)}</span><span class="macro">${f.c} kcal · ${f.p}g / ${esc(f.u)}</span></button>`).join("");
       box.querySelectorAll("button").forEach((b, i) => b.onclick = () => addFood(matches[i]));
     };
     inp.addEventListener("input", update);
     inp.addEventListener("keydown", (e) => { if (e.key === "Enter") commitFood(); });
-    // only steal focus while the user is mid-typing a food, and never scroll the page
+    // input only exists while a meal's Add Food is open; focus without scrolling the page
+    inp.focus({ preventScroll: true });
     if (UI.foodQuery) {
-      inp.focus({ preventScroll: true });
       inp.setSelectionRange(inp.value.length, inp.value.length);
       update();
     }
@@ -531,7 +545,7 @@
     qty = qty ?? qtyFromInput();
     const r = getDay(UI.dateKey, true);
     r.foods = r.foods || [];
-    r.foods.push({ name: food.n, qty, unit: food.u, cal: food.c * qty, p: food.p * qty, unitCal: food.c, unitP: food.p, meal: UI.mealSel || defaultMeal() });
+    r.foods.push({ name: food.n, qty, unit: food.u, cal: food.c * qty, p: food.p * qty, unitCal: food.c, unitP: food.p, meal: UI.addingMeal || defaultMeal() });
     setDay(UI.dateKey, { foods: r.foods });
     UI.foodQuery = "";
     render();
@@ -549,7 +563,7 @@
       if (hit) {
         const r = getDay(UI.dateKey, true);
         r.foods = r.foods || [];
-        r.foods.push({ name: hit.food.n, qty: hit.qty, unit: hit.food.u, cal: hit.food.c * hit.qty, p: hit.food.p * hit.qty, unitCal: hit.food.c, unitP: hit.food.p, meal: UI.mealSel || defaultMeal() });
+        r.foods.push({ name: hit.food.n, qty: hit.qty, unit: hit.food.u, cal: hit.food.c * hit.qty, p: hit.food.p * hit.qty, unitCal: hit.food.c, unitP: hit.food.p, meal: UI.addingMeal || defaultMeal() });
         setDay(UI.dateKey, { foods: r.foods });
         added++;
       } else failed.push(p);
@@ -561,7 +575,7 @@
         const pro = parseFloat(prompt(`Protein (g) for "${p}":`) || "0") || 0;
         const r = getDay(UI.dateKey, true);
         r.foods = r.foods || [];
-        r.foods.push({ name: p, qty: 1, unit: "serving", cal, p: pro, unitCal: cal, unitP: pro, meal: UI.mealSel || defaultMeal() });
+        r.foods.push({ name: p, qty: 1, unit: "serving", cal, p: pro, unitCal: cal, unitP: pro, meal: UI.addingMeal || defaultMeal() });
         setDay(UI.dateKey, { foods: r.foods });
         added++;
       }
@@ -594,7 +608,10 @@
         if (arg === "class") patchDay({ gymClass: !r.gymClass, gymType: r.gymClass ? null : r.gymType });
         else if (arg === "steps") patchDay({ steps10k: !r.steps10k });
         break;
-      case "meal": UI.mealSel = arg; render(); break;
+      case "meal":
+        if (arg === "add") { UI.addingMeal = arg2; UI.foodQuery = ""; render(); }
+        else if (arg === "closeadd") { UI.addingMeal = null; UI.foodQuery = ""; render(); }
+        break;
       case "vit": patchDay({ [arg]: !r[arg] }); break;
       case "aeon": patchDay({ aeon: !r.aeon }); break;
       case "dilr": patchDay({ dilr: Math.max(0, (r.dilr || 0) + Number(arg)) }); break;
@@ -614,6 +631,16 @@
       case "food":
         if (arg === "add") commitFood();
         else if (arg === "del") { const foods = r.foods.slice(); foods.splice(Number(arg2), 1); patchDay({ foods }); }
+        else if (arg === "recent") {
+          const t = (UI._recent || [])[Number(arg2)];
+          if (t) {
+            const uc = t.unitCal ?? t.cal / t.qty, up = t.unitP ?? t.p / t.qty;
+            const foods = (r.foods || []).slice();
+            foods.push({ name: t.name, qty: 1, unit: t.unit, cal: uc, p: up, unitCal: uc, unitP: up, meal: UI.addingMeal || defaultMeal() });
+            patchDay({ foods });
+            toast(`Added ${t.name}`);
+          }
+        }
         break;
       case "diet":
         if (arg === "targets") {

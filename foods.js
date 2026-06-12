@@ -197,5 +197,35 @@ window.FOODS = [
     return food ? { qty, food } : null;
   }
 
-  window.FoodDB = { matchFood, searchFoods, parseFoodEntry };
+  // emoji per food, picked by keyword (order matters)
+  function emojiFor(name) {
+    const n = String(name).toLowerCase();
+    const rules = [
+      [/egg white|omelette/, "🍳"], [/egg/, "🥚"],
+      [/whey|protein shake/, "🥤"], [/protein bar/, "🍫"],
+      [/chicken|tandoori|tikka/, "🍗"], [/fish/, "🐟"],
+      [/paneer|cheese|tofu/, "🧀"],
+      [/milk\b|full cream/, "🥛"], [/curd|dahi|yogurt|yoghurt|lassi|buttermilk|chaas/, "🥣"],
+      [/roti|chapati|naan|paratha|missi/, "🫓"], [/bread|toast|sandwich/, "🍞"],
+      [/rice|pulao|biryani|khichdi/, "🍚"],
+      [/dal|sambar|rajma|chole|chana masala|kadhi|curry|makhani|sabzi|bhurji|soup|rasam/, "🍲"],
+      [/idli|dhokla/, "🍘"], [/dosa|uttapam|chilla/, "🥞"],
+      [/poha|upma|oats|muesli|cornflakes/, "🥣"],
+      [/banana/, "🍌"], [/apple/, "🍎"], [/orange/, "🍊"], [/mango/, "🥭"],
+      [/watermelon/, "🍉"], [/grape/, "🍇"], [/papaya|pomegranate/, "🍓"],
+      [/salad|cucumber/, "🥗"], [/corn/, "🌽"], [/potato/, "🥔"],
+      [/peanut|almond|walnut|cashew|makhana|raisin|dates|chia|flax|roasted chana/, "🥜"],
+      [/samosa|kachori|pakora|vada|momo/, "🥟"], [/pizza/, "🍕"], [/burger/, "🍔"], [/fries/, "🍟"],
+      [/maggi|noodle/, "🍜"], [/biscuit|parle/, "🍪"], [/chips/, "🍿"],
+      [/chocolate/, "🍫"], [/ice cream/, "🍦"], [/cake|jamun|jalebi/, "🍰"],
+      [/tea|chai/, "🍵"], [/coffee/, "☕"],
+      [/juice|coconut water|ors/, "🧃"], [/cold drink|diet coke/, "🥤"],
+      [/thali/, "🍱"], [/ghee|butter/, "🧈"], [/honey|sugar/, "🍯"],
+      [/pav|bhaji/, "🥙"], [/soya|sprout/, "🌱"],
+    ];
+    for (const [re, e] of rules) if (re.test(n)) return e;
+    return "🍽️";
+  }
+
+  window.FoodDB = { matchFood, searchFoods, parseFoodEntry, emojiFor };
 })();
