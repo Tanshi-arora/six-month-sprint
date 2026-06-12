@@ -2,6 +2,14 @@
 
 A zero-build, offline personal tracker for CAT 2026 prep plus overall health habits. Apple-inspired light UI, all data stays in your browser (localStorage). Export a JSON backup any time from the header.
 
+## Data safety
+
+Three layers keep your data on your machine:
+
+1. **Linked backup file**: click "Link Backup File" in the header once (Chrome/Edge) and pick a JSON file anywhere on disk. Every change is auto-written to it within about a second. After a browser restart click "Unlock Backup" once (or choose "Allow on every visit" in Chrome's prompt).
+2. **Rolling snapshots**: the last 7 days of full state are kept under a separate browser key. If the main store ever turns up empty, the app offers a one-click restore on load.
+3. **Hardened Reset**: Reset requires typing DELETE, auto-downloads an export first, and never touches the linked file or snapshots.
+
 ## Run it
 
 No build step, no dependencies. Either:

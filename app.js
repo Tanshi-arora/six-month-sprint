@@ -32,6 +32,14 @@
   ];
 
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  function downloadExport() {
+    const blob = new Blob([JSON.stringify(S, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `six-month-sprint-${fmtKey(today())}.json`;
+    a.click();
+    if (window.Backup) Backup.write(true);
+  }
   const selDate = () => parseKey(UI.dateKey);
   const day = () => getDay(UI.dateKey, false);
   const patchDay = (p) => { setDay(UI.dateKey, p); render(); };
@@ -627,18 +635,21 @@
       case "rmode": UI.reportMode = arg; render(); break;
       case "week": UI.weekOffset = Math.max(0, UI.weekOffset - Number(arg)); render(); break;
       case "month": UI.monthOffset = Math.max(0, UI.monthOffset - Number(arg)); render(); break;
-      case "export": {
-        const blob = new Blob([JSON.stringify(S, null, 2)], { type: "application/json" });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `cat2026-tracker-${fmtKey(today())}.json`;
-        a.click(); toast("Exported backup JSON");
+      case "export": downloadExport(); toast("Exported backup JSON"); break;
+      case "import": document.getElementById("importFile").click(); break;
+      case "backup":
+        if (!Backup.supported) { toast("Live file backup needs Chrome or Edge. Export still works."); break; }
+        if (Backup.state() === "off") Backup.link().then(() => toast("Backup file linked. Every change now writes to it.")).catch(() => {});
+        else if (Backup.state() === "locked") Backup.unlock().then(() => toast(Backup.state() === "on" ? "Backup unlocked" : "Permission not granted"));
+        else { Backup.write(true); toast("Backup written to your file"); }
+        break;
+      case "reset": {
+        const phrase = prompt("This wipes the tracker data in THIS browser.\nA JSON export will download first, and your linked backup file and snapshots are NOT touched.\n\nType DELETE to confirm:");
+        if (phrase !== "DELETE") { toast("Reset cancelled"); break; }
+        downloadExport();
+        resetState(); render(); toast("Tracker reset. Export downloaded as a safety copy.");
         break;
       }
-      case "import": document.getElementById("importFile").click(); break;
-      case "reset":
-        if (confirm("Reset ALL tracker data? Export a backup first if unsure.")) { resetState(); render(); toast("Tracker reset"); }
-        break;
     }
   });
 
@@ -660,6 +671,20 @@
       fr.readAsText(el.files[0]); el.value = "";
     }
   });
+
+  // If the main store is empty but a rolling snapshot survives (e.g. after an
+  // accidental Reset or cleared site data), offer to bring it back once.
+  (function offerRestore() {
+    if (Object.keys(S.days).length || S.chapters.length) return;
+    if (!window.Backup) return;
+    const snap = Backup.latestSnapshot();
+    if (!snap || sessionStorage.getItem("t6-restore-declined")) return;
+    if (confirm(`Found a saved snapshot from ${snap.date}. Restore it?`)) {
+      window.S = Object.assign({}, S, snap.data);
+      saveState();
+      toast("Snapshot restored");
+    } else sessionStorage.setItem("t6-restore-declined", "1");
+  })();
 
   render();
 })();

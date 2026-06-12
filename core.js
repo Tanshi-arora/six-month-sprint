@@ -30,7 +30,10 @@
     } catch (e) { console.warn("state load failed", e); }
     return DEFAULT_STATE();
   }
-  function save() { localStorage.setItem(LS_KEY, JSON.stringify(S)); }
+  function save() {
+    localStorage.setItem(LS_KEY, JSON.stringify(S));
+    if (window.Backup) { Backup.snapshot(); Backup.write(); }
+  }
 
   window.S = load();
   window.saveState = save;
