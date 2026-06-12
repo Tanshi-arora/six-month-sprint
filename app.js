@@ -62,8 +62,17 @@
     const calT = S.settings.calTarget, proT = S.settings.proteinTarget;
     const todaysQA = Object.entries(r.qa || {}).filter(([, n]) => n > 0);
     const mealSel = UI.mealSel || defaultMeal();
+    const bun = Mascot.assess(UI.dateKey);
 
     return `
+    <div class="card mascot-card">
+      <div class="mascot">${Mascot.svg(bun.mood)}</div>
+      <div class="bubble">
+        <div class="bubble-head">${bun.head}</div>
+        <div class="small muted">${bun.sub}</div>
+      </div>
+    </div>
+
     <div class="datenav">
       <button class="navbtn" data-act="date:-1">‹</button>
       <span class="when">${fmtNice(d)}</span>
@@ -86,7 +95,7 @@
     </div>
 
     <div class="grid cols-3 mt16">
-      <div class="card">
+      <div class="card tint-teal">
         <h3><span class="dot" style="background:var(--teal)"></span> Wake Up</h3>
         <p class="sub">Goal: 7 successful days a week</p>
         <div class="seg">
@@ -96,7 +105,7 @@
         <div class="row mt12"><span class="hint">This week</span><b>${ww.yes}/7 days · ${Math.round(ww.score)}%</b></div>
       </div>
 
-      <div class="card">
+      <div class="card tint-purple">
         <h3><span class="dot" style="background:var(--purple)"></span> Office</h3>
         <p class="sub">${working ? "Working day. Log your status." : "Off day (Sun / 1st & 3rd Sat). Nothing expected."}</p>
         <div class="seg">
@@ -106,7 +115,7 @@
         <div class="row"><span class="hint">WFH used</span><b style="${om.wfh > 2 ? "color:var(--red)" : ""}">${om.wfh}/2</b></div>
       </div>
 
-      <div class="card">
+      <div class="card tint-orange">
         <h3><span class="dot" style="background:var(--orange)"></span> Gym</h3>
         <p class="sub">Goal: 4 classes a week · 10k steps = 25% credit</p>
         <div class="row"><span class="lbl">Gym class attended</span><button class="check ${r.gymClass ? "on" : ""}" data-act="gym:class">✓</button></div>
@@ -120,7 +129,7 @@
         <div class="row"><span class="hint">This week</span><b>${gw.classes}/4 classes${gw.stepDays ? ` +${gw.stepDays} step day${gw.stepDays > 1 ? "s" : ""}` : ""} · ${Math.round(gw.score)}%</b></div>
       </div>
 
-      <div class="card">
+      <div class="card tint-pink">
         <h3><span class="dot" style="background:var(--pink)"></span> Vitamins</h3>
         <p class="sub">Iron & B12 daily · Vitamin D weekly</p>
         <div class="row"><span class="lbl">Iron</span><button class="check ${r.iron ? "on" : ""}" data-act="vit:iron">✓</button></div>
@@ -129,7 +138,7 @@
         <div class="row"><span class="hint">Week doses</span><b>${vw.done}/15 · ${Math.round(vw.score)}%</b></div>
       </div>
 
-      <div class="card span-3">
+      <div class="card span-3 tint-green">
         <h3><span class="dot" style="background:var(--green)"></span> Diet Log</h3>
         <p class="sub">Targets: ${calT} kcal · ${proT}g protein <button class="iconbtn" data-act="diet:targets">edit</button>. Pick a meal, then type naturally. "rice and rajma" logs as two separate items.</p>
         <div class="seg" style="margin-bottom:10px">
@@ -165,7 +174,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card tint-indigo">
         <h3><span class="dot" style="background:var(--indigo)"></span> QA</h3>
         <p class="sub">Log today's questions per chapter. Detailed QA module coming soon, share your data to expand this window.</p>
         ${S.chapters.length ? `
@@ -184,7 +193,7 @@
         })()}</b></div>` : ""}
       </div>
 
-      <div class="card">
+      <div class="card tint-purple">
         <h3><span class="dot" style="background:var(--purple)"></span> Study Log</h3>
         <p class="sub">DILR sets, RCs, Aeon essay or Norman Lewis vocab (same weightage)</p>
         <div class="row"><span class="lbl">DILR sets today</span>
@@ -206,9 +215,9 @@
     const weeksBack = Array.from({ length: 6 }, (_, i) => addDays(monday(today()), -7 * (5 - i)));
     return `
     <div class="grid cols-3">
-      <div class="card"><div class="ringbox">${C.ring(qa ?? 0, { size: 120, color: "var(--indigo)", label: "QA · avg chapter completion", sub: "50% of study" })}</div></div>
-      <div class="card"><div class="ringbox">${C.ring(dw.score, { size: 120, color: "var(--orange)", label: `DILR · ${dw.sets}/12 sets this week`, sub: "30% of study" })}</div></div>
-      <div class="card"><div class="ringbox">${C.ring(Score.varcWeek(d), { size: 120, color: "var(--pink)", label: `VARC · RC ${rw.rcs}/10 · Aeon/Vocab ${aw.essays}/7`, sub: "20% of study" })}</div></div>
+      <div class="card tint-indigo"><div class="ringbox">${C.ring(qa ?? 0, { size: 120, color: "var(--indigo)", label: "QA · avg chapter completion", sub: "50% of study" })}</div></div>
+      <div class="card tint-orange"><div class="ringbox">${C.ring(dw.score, { size: 120, color: "var(--orange)", label: `DILR · ${dw.sets}/12 sets this week`, sub: "30% of study" })}</div></div>
+      <div class="card tint-pink"><div class="ringbox">${C.ring(Score.varcWeek(d), { size: 120, color: "var(--pink)", label: `VARC · RC ${rw.rcs}/10 · Aeon/Vocab ${aw.essays}/7`, sub: "20% of study" })}</div></div>
     </div>
 
     <div class="card mt16">

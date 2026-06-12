@@ -31,7 +31,12 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(900px 520px at 10% -6%, rgba(124, 140, 248, .11), transparent 62%),
+    radial-gradient(820px 480px at 102% 10%, rgba(79, 195, 178, .11), transparent 62%),
+    radial-gradient(900px 620px at 50% 112%, rgba(244, 143, 177, .09), transparent 62%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -73,6 +78,27 @@ input, select { font: inherit; color: inherit; }
 @media (max-width: 920px) { .cols-3, .cols-2 { grid-template-columns: 1fr; } .span-2, .span-3 { grid-column: span 1; } }
 
 .card { background: var(--card); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); }
+
+/* very muted pastel card tints */
+.card.tint-teal   { background: linear-gradient(180deg, #ecf9f6, #fff 72%); }
+.card.tint-purple { background: linear-gradient(180deg, #f4effd, #fff 72%); }
+.card.tint-orange { background: linear-gradient(180deg, #fdf3e9, #fff 72%); }
+.card.tint-pink   { background: linear-gradient(180deg, #fdf0f5, #fff 72%); }
+.card.tint-green  { background: linear-gradient(180deg, #edf8f1, #fff 72%); }
+.card.tint-indigo { background: linear-gradient(180deg, #f0f2fe, #fff 72%); }
+.card.scorestrip  { background: linear-gradient(120deg, #f0f2fe, #fff 45%, #ecf9f6); }
+
+/* Bun the mascot */
+.mascot-card { display: flex; align-items: center; gap: 20px; margin-bottom: 16px;
+  background: linear-gradient(120deg, #fdf3e9, #fdf0f5 50%, #f0f2fe); }
+.mascot-svg { width: 118px; height: auto; display: block; }
+.bubble { position: relative; background: #fff; border-radius: 16px; padding: 12px 18px;
+  box-shadow: var(--shadow); max-width: 520px; }
+.bubble::before { content: ""; position: absolute; left: -7px; top: 50%; width: 15px; height: 15px;
+  background: #fff; border-radius: 3px; transform: translateY(-50%) rotate(45deg); }
+.bubble-head { font-size: 15.5px; font-weight: 800; letter-spacing: -.01em; margin-bottom: 2px; }
+@media (max-width: 920px) { .mascot-card { flex-direction: column; text-align: center; }
+  .bubble::before { display: none; } }
 .card h3 { margin: 0 0 4px; font-size: 15px; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
 .card .sub { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
