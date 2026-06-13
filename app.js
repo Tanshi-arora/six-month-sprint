@@ -15,30 +15,40 @@
 
   const GYM_CLASSES = ["Legs", "Arms and Chest", "Chest and Back", "Full Body", "Burn", "Yoga", "Dance Fitness"];
 
-  // Arun Sharma QA for CAT (10th ed), book order, with LOD question counts.
+  // Arun Sharma QA for CAT (10th ed): question counts + plan target dates.
+  // done = already finished · "2026-06-30" = June batch · "2026-07-31" = July batch
+  const JUN = "2026-06-30", JUL = "2026-07-31";
   const ARUN_QA = [
-    { name: "Number Systems", total: 135 },
-    { name: "Progressions and Series", total: 61 },
-    { name: "Averages", total: 56 },
-    { name: "Percentages", total: 526 },
-    { name: "Ratio, Proportion and Variation", total: 75 },
-    { name: "Alligations and Mixtures", total: 30 },
-    { name: "Profit, Loss and Discount", total: 85 },
-    { name: "Simple and Compound Interest", total: 45 },
-    { name: "Time and Work", total: 65 },
-    { name: "Time, Speed and Distance", total: 65 },
-    { name: "Applications of Time, Speed and Distance", total: 26 },
-    { name: "Geometry and Mensuration", total: 71 },
-    { name: "Coordinate Geometry", total: 100 },
-    { name: "Functions", total: 90 },
-    { name: "Inequalities", total: 109 },
-    { name: "Quadratic and Other Equations", total: 65 },
-    { name: "Logarithms", total: 34 },
-    { name: "Permutations and Combinations", total: 87 },
-    { name: "Probability", total: 50 },
-    { name: "Set Theory", total: 20 },
+    { name: "Number Systems", total: 135, target: JUL },
+    { name: "Progressions and Series", total: 61, target: JUL },
+    { name: "Averages", total: 56, target: null },
+    { name: "Percentages", total: 72, target: null },
+    { name: "Ratio, Proportion and Variation", total: 75, target: null },
+    { name: "Alligations and Mixtures", total: 30, target: null },
+    { name: "Profit, Loss and Discount", total: 85, target: JUN },
+    { name: "Simple and Compound Interest", total: 45, target: JUN },
+    { name: "Time and Work", total: 65, target: JUN },
+    { name: "Time, Speed and Distance", total: 65, target: JUN },
+    { name: "Applications of Time, Speed and Distance", total: 26, target: JUN },
+    { name: "Geometry and Mensuration", total: 71, target: JUL },
+    { name: "Coordinate Geometry", total: 100, target: JUL },
+    { name: "Functions", total: 90, target: JUL },
+    { name: "Inequalities", total: 109, target: JUL },
+    { name: "Quadratic and Other Equations", total: 65, target: JUL },
+    { name: "Logarithms", total: 34, target: JUL },
+    { name: "Permutations and Combinations", total: 87, target: JUL },
+    { name: "Probability", total: 50, target: JUL },
+    { name: "Set Theory", total: 20, target: JUL },
   ];
   const ARUN_DONE = ["Averages", "Percentages", "Ratio, Proportion and Variation", "Alligations and Mixtures"];
+  // The order chapters are tackled in: June batch (user's order) first, then July (book order).
+  const QA_ORDER = [
+    "Profit, Loss and Discount", "Simple and Compound Interest", "Time and Work",
+    "Time, Speed and Distance", "Applications of Time, Speed and Distance",
+    "Number Systems", "Progressions and Series", "Geometry and Mensuration",
+    "Coordinate Geometry", "Functions", "Inequalities", "Quadratic and Other Equations",
+    "Logarithms", "Permutations and Combinations", "Probability", "Set Theory",
+  ];
   const MEALS = [
     { id: "breakfast", name: "Breakfast" },
     { id: "lunch", name: "Lunch" },
@@ -76,6 +86,26 @@
     if (!top.length) return "";
     return `<div class="recent-chips">${top.map((t, j) =>
       `<button class="chip-add" data-act="food:recent:${j}">${FoodDB.emojiFor(t.f.name)} ${esc(t.f.name)}</button>`).join("")}</div>`;
+  }
+  // Sequential QA plan for a given day: which chapter is active, today's question target.
+  function qaPlan(dateKey) {
+    const order = QA_ORDER
+      .map((n) => S.chapters.find((c) => c.name.toLowerCase() === n.toLowerCase()))
+      .filter(Boolean)
+      .map((ch) => ({ ch, st: Score.chapterStats(ch) }));
+    const incomplete = order.filter((x) => x.st.remaining > 0);
+    if (!incomplete.length) return order.length ? { order, done: true } : null;
+    const current = incomplete[0];
+    const batch = current.ch.target || "2026-07-31";
+    const batchAll = order.filter((x) => (x.ch.target || "2026-07-31") === batch);
+    const rec = S.days[dateKey] || {};
+    const doneToday = batchAll.reduce((a, x) => a + ((rec.qa || {})[x.ch.id] || 0), 0);
+    const batchRemaining = batchAll.reduce((a, x) => a + x.st.remaining, 0);
+    const day0 = parseKey(dateKey), deadline = parseKey(batch);
+    const daysLeft = Math.max(1, Math.round((deadline - day0) / 86400000) + 1);
+    // add today's logs back so the target stays fixed for the day instead of shrinking as you log
+    const dailyTarget = Math.max(1, Math.ceil((batchRemaining + doneToday) / daysLeft));
+    return { order, current, batch, batchRemaining, daysLeft, dailyTarget, doneToday };
   }
   const selDate = () => parseKey(UI.dateKey);
   const day = () => getDay(UI.dateKey, false);
@@ -220,23 +250,47 @@
         }).join("")}
       </div>
 
-      <div class="card tint-indigo">
-        <h3><span class="dot" style="background:var(--indigo)"></span> QA</h3>
-        <p class="sub">Log today's questions per chapter. Detailed QA module coming soon, share your data to expand this window.</p>
-        ${S.chapters.length ? `
-        <div class="field-row">
-          <select class="input" id="qaChapter" style="flex:1">${S.chapters.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select>
-          <input class="input sm" type="number" min="1" id="qaCount" placeholder="Qs">
-          <button class="btn primary" data-act="qa:log">Log</button>
-        </div>` : `<div class="small muted">Add QA chapters in the Study tab to log questions.</div>`}
-        ${todaysQA.length ? `<div class="mt8 small">${todaysQA.map(([id, n]) => {
-          const ch = S.chapters.find((c) => c.id === id);
-          return `<div class="row"><span class="lbl">${ch ? esc(ch.name) : "Chapter"}</span><b>+${n} Qs <button class="iconbtn" data-act="qa:undo:${id}">undo</button></b></div>`;
-        }).join("")}</div>` : ""}
-        ${S.chapters.length ? `<div class="row mt8"><span class="hint">Today's required pace</span><b>${(() => {
-          let t = 0; for (const ch of S.chapters) { const st = Score.chapterStats(ch); if (st.pace && st.remaining > 0) t += st.pace; }
-          return t ? t + " Qs" : "on track";
-        })()}</b></div>` : ""}
+      <div class="card tint-indigo span-2">
+        <h3><span class="dot" style="background:var(--indigo)"></span> QA · Today's Plan</h3>
+        <p class="sub">One chapter at a time, in order. June batch by 30 Jun, the rest by 31 Jul. The daily target rebalances as you log.</p>
+        ${(() => {
+          if (!S.chapters.length) return `<div class="small muted">Add QA chapters in the Study tab to build your plan.</div>`;
+          const plan = qaPlan(UI.dateKey);
+          if (!plan || plan.done) return `<div class="empty">🎉 All QA chapters complete!</div>`;
+          const cur = plan.current;
+          const hit = plan.doneToday >= plan.dailyTarget;
+          return `
+          <div class="qa-today">
+            <div class="qa-today-main">
+              <div class="qt-label">Today's target · ${plan.batch === JUN ? "June batch" : "July batch"} · ${plan.daysLeft}d left</div>
+              <div class="qt-big">${plan.doneToday}<span class="qt-slash">/${plan.dailyTarget}</span> <span class="qt-unit">Qs</span></div>
+              ${C.bar(plan.dailyTarget ? (plan.doneToday / plan.dailyTarget) * 100 : 0, "var(--indigo)")}
+              <div class="qt-current">On now: <b>${esc(cur.ch.name)}</b> — ${cur.st.done}/${cur.ch.total} done, <b>${cur.st.remaining} left</b></div>
+              <button class="btn primary mt8" data-act="qa:today">${hit ? "Target hit ✓ — log more" : "+ Log today's target"}</button>
+            </div>
+            <div class="qa-queue">
+              ${plan.order.map((x) => {
+                const done = x.st.remaining === 0;
+                const isCur = cur && x.ch.id === cur.ch.id;
+                const tag = (x.ch.target || JUL) === JUN ? "jun" : "jul";
+                return `<div class="qq-row ${done ? "done" : isCur ? "cur" : "up"}">
+                  <span>${done ? "✓" : isCur ? "▸" : "·"} ${esc(x.ch.name)}</span>
+                  <span class="qq-meta"><span class="tag ${tag}">${tag === "jun" ? "Jun" : "Jul"}</span> ${x.st.done}/${x.ch.total}</span>
+                </div>`;
+              }).join("")}
+            </div>
+          </div>
+          <div class="field-row mt12">
+            <span class="hint">Custom log:</span>
+            <select class="input" id="qaChapter" style="flex:1">${S.chapters.map((c) => `<option value="${c.id}" ${cur && c.id === cur.ch.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>
+            <input class="input sm" type="number" min="1" id="qaCount" placeholder="Qs">
+            <button class="btn primary" data-act="qa:log">Log</button>
+          </div>
+          ${todaysQA.length ? `<div class="mt8 small muted">Logged today: ${todaysQA.map(([id, n]) => {
+            const ch = S.chapters.find((c) => c.id === id);
+            return `${ch ? esc(ch.name) : "Chapter"} +${n} <button class="iconbtn" data-act="qa:undo:${id}">undo</button>`;
+          }).join(" · ")}</div>` : ""}`;
+        })()}
       </div>
 
       <div class="card tint-purple">
@@ -656,6 +710,16 @@
           toast(`Logged ${n} questions`);
         } else if (arg === "undo") {
           const qa = { ...(r.qa || {}) }; delete qa[arg2]; patchDay({ qa });
+        } else if (arg === "today") {
+          const plan = qaPlan(UI.dateKey);
+          if (!plan || plan.done) { toast("All QA chapters done 🎉"); break; }
+          const left = Math.max(0, plan.dailyTarget - plan.doneToday);
+          const add = Math.min(left > 0 ? left : plan.dailyTarget, plan.current.st.remaining);
+          if (add <= 0) { toast("Nothing left on the current chapter"); break; }
+          const id = plan.current.ch.id;
+          const qa = { ...(r.qa || {}) }; qa[id] = (qa[id] || 0) + add;
+          patchDay({ qa });
+          toast(`+${add} Qs on ${plan.current.ch.name}`);
         }
         break;
       case "food":
@@ -694,16 +758,17 @@
           const byName = {};
           S.chapters.forEach((c) => { byName[c.name.toLowerCase()] = c; });
           let added = 0, updated = 0;
-          for (const { name, total } of ARUN_QA) {
+          for (const { name, total, target } of ARUN_QA) {
             const done = ARUN_DONE.includes(name);
             const existing = byName[name.toLowerCase()];
             if (existing) {
               existing.total = total;
+              existing.target = target;
               if (done) existing.startDone = total;
               else if (existing.startDone > total) existing.startDone = total;
               updated++;
             } else {
-              S.chapters.push({ id: "ch" + Math.random().toString(36).slice(2, 8), name, total, startDone: done ? total : 0, target: null });
+              S.chapters.push({ id: "ch" + Math.random().toString(36).slice(2, 8), name, total, startDone: done ? total : 0, target });
               added++;
             }
           }
