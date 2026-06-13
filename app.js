@@ -103,7 +103,7 @@
     { name: "RC: Critical Reasoning", total: 15 },
     { name: "RC: Practice Passages", total: 40 },
   ];
-  const VOCAB_ITEMS = [{ name: "Word Power Made Easy (sessions)", total: 47 }];
+  const VOCAB_ITEMS = [{ name: "Word Power Made Easy", total: 47 }];
   const SUBJECTS = ["qa", "dilr", "varc", "vocab"];
   const PLAN_SUBJECTS = ["qa", "dilr", "varc", "vocab"]; // all sequential, item-based topic plans
   const PLAN_START = window.PLAN_START || "2026-06-14"; // calendar starts here; no future logging
