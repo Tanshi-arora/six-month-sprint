@@ -27,10 +27,20 @@
     dilr: 0, aeon: false, vocabPages: 0, // legacy fields kept for back-compat
   });
 
+  const PLAN_START = "2026-06-14"; // the tracker begins here; earlier day-logs are dropped
   function load() {
     try {
       const raw = localStorage.getItem(LS_KEY);
-      if (raw) return Object.assign(DEFAULT_STATE(), JSON.parse(raw));
+      if (raw) {
+        const st = Object.assign(DEFAULT_STATE(), JSON.parse(raw));
+        const t = new Date(), p = (n) => String(n).padStart(2, "0");
+        const todayKey = `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`;
+        let purged = false;
+        // calendar starts 14 Jun; drop anything before it or in the future (no "tomorrow" data)
+        for (const k of Object.keys(st.days)) { if (k < PLAN_START || k > todayKey) { delete st.days[k]; purged = true; } }
+        st._purged = purged;
+        return st;
+      }
     } catch (e) { console.warn("state load failed", e); }
     return DEFAULT_STATE();
   }
@@ -40,6 +50,8 @@
   }
 
   window.S = load();
+  window.PLAN_START = PLAN_START;
+  if (S._purged) { delete S._purged; save(); } // persist the calendar-start cleanup once
   window.saveState = save;
   window.resetState = () => { window.S = DEFAULT_STATE(); save(); };
   window.getDay = (key, create) => {

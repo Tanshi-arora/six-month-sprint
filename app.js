@@ -81,6 +81,7 @@
   const VOCAB_ITEMS = [{ name: "Word Power Made Easy (sessions)", total: 47 }];
   const SUBJECTS = ["qa", "dilr", "varc", "vocab"];
   const PLAN_SUBJECTS = ["qa", "vocab"]; // sequential, item-based plans (DILR/VARC are daily counters)
+  const PLAN_START = window.PLAN_START || "2026-06-14"; // calendar starts here; no future logging
   // CAT mock cadence by month
   const MOCK_PLAN = "Jul: 1 / 2 weeks · Aug: 1 / week · Sep: 2 / week · Oct-Nov: 2-3 / week";
   const MEALS = [
@@ -180,12 +181,12 @@
     </div>
 
     <div class="datenav">
-      <button class="navbtn" data-act="date:-1">‹</button>
+      <button class="navbtn" data-act="date:-1" ${UI.dateKey <= PLAN_START ? "disabled" : ""}>‹</button>
       <span class="when">${fmtNice(d)}</span>
-      <button class="navbtn" data-act="date:1">›</button>
-      <input type="date" value="${UI.dateKey}" data-act="date:set">
+      <button class="navbtn" data-act="date:1" ${isToday ? "disabled" : ""}>›</button>
+      <input type="date" value="${UI.dateKey}" min="${PLAN_START}" max="${fmtKey(today())}" data-act="date:set">
       <span class="chip ${working ? "work" : "off"}">${working ? "Working day" : "Off day"}</span>
-      ${isToday ? "" : `<span class="chip today-link" data-act="date:today">Jump to today</span>`}
+      ${isToday ? "" : `<span class="chip today-link" data-act="date:today">Back to today</span>`}
     </div>
 
     <div class="card scorestrip">
@@ -732,7 +733,10 @@
     switch (act) {
       case "date":
         if (arg === "today") UI.dateKey = fmtKey(today());
-        else if (arg !== "set") UI.dateKey = fmtKey(addDays(selDate(), Number(arg)));
+        else if (arg !== "set") {
+          const nd = fmtKey(addDays(selDate(), Number(arg)));
+          if (nd >= PLAN_START && nd <= fmtKey(today())) UI.dateKey = nd; // no past-start / no future
+        }
         render(); break;
       case "wake": patchDay({ wake: arg === "yes" ? (r.wake === true ? null : true) : (r.wake === false ? null : false) }); break;
       case "office": patchDay({ office: r.office === arg ? null : arg }); break;
@@ -913,7 +917,11 @@
 
   document.addEventListener("change", (e) => {
     const el = e.target;
-    if (el.matches('input[type=date][data-act="date:set"]') && el.value) { UI.dateKey = el.value; render(); }
+    if (el.matches('input[type=date][data-act="date:set"]') && el.value) {
+      let v = el.value, tk = fmtKey(today());
+      if (v < PLAN_START) v = PLAN_START; if (v > tk) v = tk; // clamp to [start, today]
+      UI.dateKey = v; render();
+    }
     if (el.matches('[data-act="gym:cal"]')) setDay(UI.dateKey, { gymCal: parseInt(el.value, 10) || null });
     if (el.matches('[data-act="gym:type"]')) { setDay(UI.dateKey, { gymType: el.value || null }); render(); }
     if (el.matches('[data-act^="food:qty:"]')) {
