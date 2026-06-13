@@ -195,22 +195,25 @@
   function weekSum(d, field) {
     return weekKeys(d).reduce((a, k) => a + ((S.days[k] && S.days[k][field]) || 0), 0);
   }
-  // DILR: track sets attempted & solved (legacy `dilr` counts as solved). Goal ~1/day = 7/week.
-  function dilrWeek(d) {
-    const keys = weekKeys(d);
-    const att = keys.reduce((a, k) => { const r = S.days[k]; return a + ((r && (r.dilrAtt || 0)) || 0); }, 0);
-    const sol = keys.reduce((a, k) => { const r = S.days[k]; return a + ((r && (r.dilrSol != null ? r.dilrSol : r.dilr)) || 0); }, 0);
-    return { att, sets: sol, score: clamp((sol / 7) * 100) };
+  // DILR & VARC are topic plans now: units done = sum of per-item logs (day.qa[itemId]) for that subject.
+  function daySubjectSum(key, subject) {
+    const r = S.days[key]; if (!r || !r.qa) return 0;
+    let s = 0; for (const c of S.chapters) if ((c.subject || "qa") === subject) s += r.qa[c.id] || 0;
+    return s;
   }
-  function rcWeek(d) { const rcs = weekSum(d, "rc"); return { rcs, score: clamp((rcs / 7) * 100) }; }
-  // VARC daily habit = 1 RC OR 1 VA exercise. 7/week target.
-  function vaWeek(d) { const ex = weekSum(d, "va"); return { ex, score: clamp((ex / 7) * 100) }; }
-  function aeonWeek(d) { // kept name for reports compatibility; now = RC+VA activity days
-    const keys = weekKeys(d);
-    const days = keys.filter((k) => { const r = S.days[k]; return r && ((r.rc || 0) > 0 || (r.va || 0) > 0); }).length;
+  function weekSubjectSum(d, subject) { return weekKeys(d).reduce((a, k) => a + daySubjectSum(k, subject), 0); }
+  function subjectTotalDone(subject) {
+    let s = 0; for (const k in S.days) s += daySubjectSum(k, subject); return s;
+  }
+  // ~1 a day = 7/week target (light foundation habit).
+  function dilrWeek(d) { const sets = weekSubjectSum(d, "dilr"); return { att: sets, sets, score: clamp((sets / 7) * 100) }; }
+  function rcWeek(d) { const rcs = weekSubjectSum(d, "varc"); return { rcs, score: clamp((rcs / 7) * 100) }; }
+  function vaWeek(d) { const ex = weekSubjectSum(d, "varc"); return { ex, score: clamp((ex / 7) * 100) }; }
+  function aeonWeek(d) { // reports compatibility: VARC activity days this week
+    const days = weekKeys(d).filter((k) => daySubjectSum(k, "varc") > 0).length;
     return { essays: days, pages: 0, score: clamp((days / 7) * 100) };
   }
-  function varcWeek(d) { return rnd((rcWeek(d).score + vaWeek(d).score) / 2); }
+  function varcWeek(d) { return rcWeek(d).score; }
 
   // Reading: minutes/day (goal 20) and current consecutive-day streak.
   function readingWeek(d) {
@@ -280,9 +283,8 @@
     let qaDaily = null;
     if (paceTarget > 0) qaDaily = clamp((qaToday / paceTarget) * 100);
     else if (qc.length) qaDaily = qaToday > 0 ? 100 : 0;
-    const dilrSol = r.dilrSol != null ? r.dilrSol : (r.dilr || 0);
-    const dilrDaily = clamp(dilrSol * 100);              // 1 set/day minimum
-    const varcDaily = clamp(((r.rc || 0) + (r.va || 0)) * 100); // 1 RC or VA exercise/day
+    const dilrDaily = clamp(daySubjectSum(key, "dilr") * 100);  // 1 set/day of current topic
+    const varcDaily = clamp(daySubjectSum(key, "varc") * 100);  // 1 exercise/day of current topic
     const study = qaDaily == null
       ? rnd(dilrDaily * 0.6 + varcDaily * 0.4)
       : rnd(qaDaily * 0.5 + dilrDaily * 0.3 + varcDaily * 0.2);
@@ -322,6 +324,7 @@
     proteinScore, calorieScore, dietDay, dietWeek,
     chapterDone, chapterStats, qaScore, qaChapters,
     dilrWeek, rcWeek, vaWeek, aeonWeek, varcWeek, studyScore, readingWeek, readingStreak,
+    daySubjectSum, weekSubjectSum, subjectTotalDone,
     categoryScores, overallScore, readinessScore, dailyActivity,
     dailyScores, overallToday,
   };

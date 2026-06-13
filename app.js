@@ -56,18 +56,18 @@
   const AUG = "2026-08-31", VOCAB_END = "2026-08-03";
   const SUB_META = {
     qa:    { name: "QA",    color: "var(--indigo)", soft: "var(--indigo-soft)", unit: "Qs" },
-    dilr:  { name: "DILR",  color: "var(--orange)", soft: "var(--orange-soft)", unit: "sets" },
-    varc:  { name: "VARC",  color: "var(--pink)",   soft: "var(--pink-soft)",   unit: "ex" },
-    vocab: { name: "Vocab", color: "var(--teal)",   soft: "var(--teal-soft)",   unit: "sessions" },
+    dilr:  { name: "DILR",  color: "var(--orange)", soft: "var(--orange-soft)", unit: "set" },
+    varc:  { name: "VARC",  color: "var(--pink)",   soft: "var(--pink-soft)",   unit: "exercise" },
+    vocab: { name: "Vocab", color: "var(--teal)",   soft: "var(--teal-soft)",   unit: "session" },
   };
-  // DILR (Sharma LR + DI), tracked in practice sets · counts are estimates, editable.
+  // DILR topics in book order (Sharma LR + DI). Counts are set estimates, editable per row.
   const DILR_ITEMS = [
     { name: "LR: Arrangements", total: 14 }, { name: "LR: Rankings", total: 8 },
     { name: "LR: Team Formations", total: 8 }, { name: "LR: Quantitative Reasoning", total: 8 },
     { name: "LR: Routes & Networks", total: 6 }, { name: "LR: Set Theory & Venn", total: 8 },
     { name: "LR: Cubes & Dice", total: 6 }, { name: "LR: Games & Tournaments", total: 8 },
-    { name: "LR: Binary Logic", total: 6 }, { name: "LR: Syllogisms", total: 10 },
-    { name: "LR: Logical Deduction", total: 8 }, { name: "DI: Traditional DI", total: 16 },
+    { name: "LR: Syllogisms", total: 10 }, { name: "LR: Logical Deduction", total: 8 },
+    { name: "LR: Binary Logic", total: 6 }, { name: "DI: Traditional DI", total: 16 },
     { name: "DI: Logical DI", total: 14 }, { name: "DI: Twelve-Minute Tests", total: 12 },
   ];
   // VARC (RC book + Verbal Ability book), tracked in exercises/passages · estimates, editable.
@@ -82,7 +82,7 @@
   ];
   const VOCAB_ITEMS = [{ name: "Word Power Made Easy (sessions)", total: 47 }];
   const SUBJECTS = ["qa", "dilr", "varc", "vocab"];
-  const PLAN_SUBJECTS = ["qa", "vocab"]; // sequential, item-based plans (DILR/VARC are daily counters)
+  const PLAN_SUBJECTS = ["qa", "dilr", "varc", "vocab"]; // all sequential, item-based topic plans
   const PLAN_START = window.PLAN_START || "2026-06-14"; // calendar starts here; no future logging
   // CAT mock cadence by month
   const MOCK_PLAN = "Jul: 1 / 2 weeks · Aug: 1 / week · Sep: 2 / week · Oct-Nov: 2-3 / week";
@@ -142,8 +142,8 @@
     const batchRemaining = batchAll.reduce((a, x) => a + x.st.remaining, 0);
     const day0 = parseKey(dateKey), deadline = parseKey(batch);
     const daysLeft = Math.max(1, Math.round((deadline - day0) / 86400000) + 1);
-    // add today's logs back so the target stays fixed for the day instead of shrinking as you log
-    const dailyTarget = Math.max(1, Math.ceil((batchRemaining + doneToday) / daysLeft));
+    // QA paces to its deadline; DILR/VARC/Vocab are light "1 of the current topic per day".
+    const dailyTarget = subject === "qa" ? Math.max(1, Math.ceil((batchRemaining + doneToday) / daysLeft)) : 1;
     return { subject, order, current, batch, batchRemaining, daysLeft, dailyTarget, doneToday };
   }
   const qaPlan = (dateKey) => planFor("qa", dateKey);
@@ -204,29 +204,29 @@
     </div>
 
     ${(() => {
-      const qaP = planFor("qa", UI.dateKey), voP = planFor("vocab", UI.dateKey);
-      const qaDone = Score.qaChapters().reduce((a, c) => a + ((r.qa || {})[c.id] || 0), 0);
-      const voDone = S.chapters.filter((c) => c.subject === "vocab").reduce((a, c) => a + ((r.qa || {})[c.id] || 0), 0);
-      const tgts = [
-        { sub: "qa", goal: qaP && !qaP.done ? qaP.dailyTarget : 0, done: qaDone, label: qaP && !qaP.done ? qaP.dailyTarget + " questions" : "all done", note: qaP && !qaP.done ? qaP.current.ch.name : "" },
-        { sub: "dilr", goal: 1, done: r.dilrSol || 0, label: "1 set solved", note: "tap to add a set" },
-        { sub: "varc", goal: 1, done: (r.rc || 0) + (r.va || 0), label: "1 RC or VA", note: "tap to add one" },
-        { sub: "vocab", goal: voP && !voP.done ? 1 : 0, done: voDone, label: voP && !voP.done ? "1 session" : "all done", note: "Word Power" },
-        { sub: "read", goal: 20, done: r.readMin || 0, label: "20 minutes", note: "tap +20 min", color: "var(--green)", soft: "var(--green-soft)" },
-      ];
+      // each subject's tile shows the current topic to do today; reading is a simple 20-min tile
+      const verb = { qa: (n) => `${n} questions`, dilr: () => "1 set", varc: () => "1 exercise", vocab: () => "1 session" };
+      const tgts = PLAN_SUBJECTS.map((sub) => {
+        const p = planFor(sub, UI.dateKey);
+        if (!p) return { sub, missing: true, goal: 0, done: 0, label: "load plan in Study tab", note: "" };
+        if (p.done) return { sub, goal: 0, done: 0, label: "all done 🎉", note: "" };
+        const target = sub === "qa" ? p.dailyTarget : 1;
+        return { sub, goal: target, done: p.doneToday, label: verb[sub](target), note: p.current.ch.name };
+      });
+      tgts.push({ sub: "read", goal: 20, done: r.readMin || 0, label: "20 minutes", note: "daily reading", color: "var(--green)", soft: "var(--green-soft)" });
       const hitN = tgts.filter((t) => t.goal > 0 && t.done >= t.goal).length;
       const liveN = tgts.filter((t) => t.goal > 0).length;
       return `<div class="card span-3 targets-card">
         <h3>Today's Targets <span class="muted small">${hitN}/${liveN} done · tap a card to log</span></h3>
-        <p class="sub">The priority. Hit each one and today counts, simple yes or no.</p>
+        <p class="sub">The priority. One task per subject, tap to mark done, tap again to undo.</p>
         <div class="tgt-grid">
           ${tgts.map((t) => {
             const m = t.sub === "read" ? { name: "Reading", color: t.color, soft: t.soft } : SUB_META[t.sub];
             const na = t.goal === 0;
             const done = !na && t.done >= t.goal;
             return `<div class="tgt ${done ? "hit" : na ? "na" : ""}" ${na ? "" : `data-act="tgt:${t.sub}" role="button" tabindex="0" title="${done ? "tap to undo" : "tap to mark done"}"`} style="--c:${m.color};--s:${m.soft}">
-              <div class="tgt-head"><span class="tgt-name">${m.name}</span>${na ? `<span class="yn done">✓ done</span>` : done ? `<span class="yn yes">YES ✓</span>` : `<span class="yn no">tap to log</span>`}</div>
-              <div class="tgt-goal">${na ? "nothing left" : t.label}</div>
+              <div class="tgt-head"><span class="tgt-name">${m.name}</span>${na ? `<span class="yn done">${t.missing ? "—" : "✓ done"}</span>` : done ? `<span class="yn yes">YES ✓</span>` : `<span class="yn no">tap to log</span>`}</div>
+              <div class="tgt-goal">${t.label}</div>
               ${t.note ? `<div class="tgt-note">${esc(t.note)}</div>` : ""}
               ${na ? "" : `<div class="tgt-prog">${t.done}/${t.goal}</div>`}
             </div>`;
@@ -350,22 +350,19 @@
       </div>
     </div>
 
-    ${(() => {
-      let dilrTot = 0, rcTot = 0, vaTot = 0, readDays = 0;
-      for (const k in S.days) { const rr = S.days[k]; dilrTot += (rr.dilrSol != null ? rr.dilrSol : rr.dilr) || 0; rcTot += rr.rc || 0; vaTot += rr.va || 0; if ((rr.readMin || 0) >= 20) readDays++; }
-      return `<div class="grid cols-4 mt16">
-        <div class="card" style="background:linear-gradient(180deg,${SUB_META.qa.soft},#fff 72%)"><div class="ringbox">${C.ring(subPct("qa") ?? 0, { size: 104, color: SUB_META.qa.color, label: "QA book", sub: "complete" })}</div></div>
-        <div class="card" style="background:linear-gradient(180deg,${SUB_META.vocab.soft},#fff 72%)"><div class="ringbox">${C.ring(subPct("vocab") ?? 0, { size: 104, color: SUB_META.vocab.color, label: "Vocab (WPME)", sub: "complete" })}</div></div>
-        <div class="card" style="background:linear-gradient(180deg,${SUB_META.dilr.soft},#fff 72%)"><h3 style="margin-bottom:10px">DILR & VARC</h3>
-          <div class="row"><span class="lbl">DILR sets solved</span><b>${dilrTot}</b></div>
-          <div class="row"><span class="lbl">RCs done</span><b>${rcTot}</b></div>
-          <div class="row"><span class="lbl">VA exercises</span><b>${vaTot}</b></div>
-          <div class="row"><span class="hint">This week</span><b>${Score.dilrWeek(d).sets} · ${Score.rcWeek(d).rcs} · ${Score.vaWeek(d).ex}</b></div></div>
-        <div class="card" style="background:linear-gradient(180deg,${SUB_META.varc.soft},#fff 72%)"><h3 style="margin-bottom:10px">Reading</h3>
-          <div class="ringbox" style="text-align:center"><div style="font-size:38px;font-weight:800;letter-spacing:-.02em">🔥 ${Score.readingStreak()}</div><div class="ring-label">day streak (20+ min)</div></div>
-          <div class="row mt8"><span class="hint">Days hit this week</span><b>${Score.readingWeek(d).days}/7</b></div></div>
-      </div>`;
-    })()}
+    <div class="grid cols-4 mt16">
+      ${["qa", "dilr", "varc", "vocab"].map((s) => `<div class="card" style="background:linear-gradient(180deg,${SUB_META[s].soft},#fff 72%)"><div class="ringbox">${C.ring(subPct(s) ?? 0, { size: 104, color: SUB_META[s].color, label: SUB_META[s].name + (s === "vocab" ? " (WPME)" : " book"), sub: "complete" })}</div></div>`).join("")}
+    </div>
+    <div class="grid cols-2 mt16">
+      <div class="card">
+        <h3>DILR & VARC topics done</h3><p class="sub">Sets / exercises logged so far · 1/day minimum</p>
+        <div class="row"><span class="lbl"><span class="dot" style="background:var(--orange)"></span> DILR sets</span><b>${Score.subjectTotalDone("dilr")} · this week ${Score.dilrWeek(d).sets}</b></div>
+        <div class="row"><span class="lbl"><span class="dot" style="background:var(--pink)"></span> VARC exercises</span><b>${Score.subjectTotalDone("varc")} · this week ${Score.rcWeek(d).rcs}</b></div>
+      </div>
+      <div class="card"><h3>Reading</h3><p class="sub">20 min/day habit</p>
+        <div class="ringbox" style="text-align:center"><div style="font-size:38px;font-weight:800;letter-spacing:-.02em">🔥 ${Score.readingStreak()}</div><div class="ring-label">day streak (20+ min)</div></div>
+        <div class="row mt8"><span class="hint">Days hit this week</span><b>${Score.readingWeek(d).days}/7</b></div></div>
+    </div>
 
     <div class="card mt16">
       <h3>Full Syllabus <span class="muted small">all books by 31 Aug · daily plan drives the Today tab</span></h3>
@@ -378,9 +375,9 @@
         <input class="input" id="chTarget" type="date" style="width:150px">
         <button class="btn primary" data-act="ch:add">+ Add</button>
       </div>
-      <div class="mt8 field-row"><button class="btn primary" data-act="ch:seed">📚 Load study plan (QA + Vocab)</button>
+      <div class="mt8 field-row"><button class="btn primary" data-act="ch:seed">📚 Load full study plan</button>
         <button class="btn danger" data-act="ch:fresh">🔄 Start fresh (keep only the 4 done)</button></div>
-      <div class="small muted mt8">Load = add/refresh chapters, keeps your progress. Start fresh = wipe all logs &amp; progress, keep only Averages, Percentages, RPV and Alligations marked done (backup downloads first).</div>
+      <div class="small muted mt8">Load = QA + DILR + VARC topics + Word Power, keeps your progress. Start fresh = wipe all logs &amp; progress, keep only Averages, Percentages, RPV and Alligations marked done (backup downloads first).</div>
       ${PLAN_SUBJECTS.map((s) => {
         const items = S.chapters.filter((c) => (c.subject || "qa") === s).sort((a, b) => (a.ord ?? 99) - (b.ord ?? 99));
         if (!items.length) return "";
@@ -759,25 +756,23 @@
       case "va": patchDay({ va: Math.max(0, (r.va || 0) + Number(arg)) }); break;
       case "tgt": {
         // each tile is a yes/no toggle for TODAY only — tap to mark done, tap again to undo. never overshoots.
-        if (arg === "qa" || arg === "vocab") {
+        if (PLAN_SUBJECTS.includes(arg)) {
           const p = planFor(arg, UI.dateKey);
-          if (!p) break;
-          const chs = arg === "qa" ? Score.qaChapters() : S.chapters.filter((c) => c.subject === "vocab");
+          if (!p) { toast("Load the plan in the Study tab first"); break; }
+          if (p.done) { toast(SUB_META[arg].name + " all done 🎉"); break; }
+          const chs = S.chapters.filter((c) => (c.subject || "qa") === arg);
           const qa = { ...(r.qa || {}) };
           const doneToday = chs.reduce((a, c) => a + (qa[c.id] || 0), 0);
-          const target = p.done ? 0 : (arg === "qa" ? p.dailyTarget : 1);
-          if (target === 0) { toast(SUB_META[arg].name + " all done 🎉"); break; }
+          const target = arg === "qa" ? p.dailyTarget : 1;
           if (doneToday >= target) {
             chs.forEach((c) => { delete qa[c.id]; });            // untick: clear today's logs for this subject
             patchDay({ qa }); toast(SUB_META[arg].name + " un-ticked for today");
           } else {
-            let need = target - doneToday;                        // tick: log up to target, flowing across chapters
+            let need = target - doneToday;                        // tick: log up to target, flowing across topics
             for (const x of p.order) { if (need <= 0) break; const add = Math.min(need, x.st.remaining); if (add > 0) { qa[x.ch.id] = (qa[x.ch.id] || 0) + add; need -= add; } }
             patchDay({ qa }); toast(`${SUB_META[arg].name} done for today ✓`);
           }
-        } else if (arg === "dilr") { const on = (r.dilrSol || 0) >= 1; patchDay({ dilrSol: on ? 0 : 1, dilrAtt: on ? 0 : Math.max(r.dilrAtt || 0, 1) }); }
-        else if (arg === "varc") { const on = ((r.rc || 0) + (r.va || 0)) >= 1; patchDay({ rc: on ? 0 : 1, va: 0 }); }
-        else if (arg === "read") { const on = (r.readMin || 0) >= 20; patchDay({ readMin: on ? 0 : 20 }); }
+        } else if (arg === "read") { const on = (r.readMin || 0) >= 20; patchDay({ readMin: on ? 0 : 20 }); }
         break;
       }
       case "mock":
@@ -855,9 +850,9 @@
           // build the unified syllabus: subject, unit, order, target per item
           const plan = [];
           ARUN_QA.forEach((it, i) => { const o = QA_ORDER.indexOf(it.name); plan.push({ ...it, subject: "qa", unit: SUB_META.qa.unit, ord: o === -1 ? 100 + i : o, done: ARUN_DONE.includes(it.name) }); });
+          DILR_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "dilr", unit: SUB_META.dilr.unit, ord: i, target: JUL, done: false }));
+          VARC_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "varc", unit: SUB_META.varc.unit, ord: i, target: JUL, done: false }));
           VOCAB_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "vocab", unit: SUB_META.vocab.unit, ord: i, target: VOCAB_END, done: false }));
-          // DILR & VARC are tracked as light daily counters, not topic-grinds; drop any old topic items.
-          S.chapters = S.chapters.filter((c) => { const s = c.subject || "qa"; return s === "qa" || s === "vocab"; });
           const byName = {};
           S.chapters.forEach((c) => { byName[c.name.toLowerCase()] = c; });
           let added = 0, updated = 0;
@@ -879,8 +874,11 @@
           if (!confirm("Start fresh?\n\nThis clears ALL daily logs, mocks, and chapter progress, keeping only the 4 completed QA chapters (Averages, Percentages, RPV, Alligations) marked done.\n\nA backup downloads first. Continue?")) break;
           downloadExport();
           S.days = {}; S.mocks = []; S.chapters = [];
-          ARUN_QA.forEach((it, i) => { const o = QA_ORDER.indexOf(it.name); S.chapters.push({ id: "ch" + Math.random().toString(36).slice(2, 8), name: it.name, total: it.total, startDone: ARUN_DONE.includes(it.name) ? it.total : 0, target: it.target, subject: "qa", unit: SUB_META.qa.unit, ord: o === -1 ? 100 + i : o }); });
-          VOCAB_ITEMS.forEach((it, i) => S.chapters.push({ id: "ch" + Math.random().toString(36).slice(2, 8), name: it.name, total: it.total, startDone: 0, target: VOCAB_END, subject: "vocab", unit: SUB_META.vocab.unit, ord: i }));
+          const mk = (name, total, startDone, target, subject, ord) => S.chapters.push({ id: "ch" + Math.random().toString(36).slice(2, 8), name, total, startDone, target, subject, unit: SUB_META[subject].unit, ord });
+          ARUN_QA.forEach((it, i) => { const o = QA_ORDER.indexOf(it.name); mk(it.name, it.total, ARUN_DONE.includes(it.name) ? it.total : 0, it.target, "qa", o === -1 ? 100 + i : o); });
+          DILR_ITEMS.forEach((it, i) => mk(it.name, it.total, 0, JUL, "dilr", i));
+          VARC_ITEMS.forEach((it, i) => mk(it.name, it.total, 0, JUL, "varc", i));
+          VOCAB_ITEMS.forEach((it, i) => mk(it.name, it.total, 0, VOCAB_END, "vocab", i));
           saveState(); render(); toast("Fresh start: 4 chapters done, everything else cleared");
         } else if (arg === "del") {
           const ch = S.chapters.find((c) => c.id === arg2);
