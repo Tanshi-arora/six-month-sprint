@@ -9,6 +9,7 @@ Three layers keep your data on your machine:
 1. **Linked backup file**: click "Link Backup File" in the header once (Chrome/Edge) and pick a JSON file anywhere on disk. Every change is auto-written to it within about a second. After a browser restart click "Unlock Backup" once (or choose "Allow on every visit" in Chrome's prompt).
 2. **Rolling snapshots**: the last 7 days of full state are kept under a separate browser key. If the main store ever turns up empty, the app offers a one-click restore on load.
 3. **Hardened Reset**: Reset requires typing DELETE, auto-downloads an export first, and never touches the linked file or snapshots.
+4. **Auto-export**: if no live backup file is linked, the app downloads a dated JSON backup to your Downloads folder automatically every 3 days (so a safety copy always exists off the browser).
 
 ## Run it
 

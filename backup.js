@@ -132,6 +132,32 @@
     refresh();
   }
 
-  window.Backup = { supported, link, unlock, write, snapshot, latestSnapshot, refresh, state: () => status };
+  // ---- periodic auto-export -----------------------------------------------
+  const AUTO_KEY = "t6-last-autoexport", AUTO_DAYS = 3;
+  function hasData() {
+    const s = window.S || {};
+    return Object.keys(s.days || {}).length > 0 || (s.chapters || []).length > 0;
+  }
+  function autoExportCheck() {
+    // a live linked file is already saving every change, so don't also spam downloads
+    if (status === "on") return;
+    if (!window.exportBackup || !hasData()) return;
+    const last = localStorage.getItem(AUTO_KEY);
+    let due = !last;
+    if (last) {
+      const diffDays = (new Date() - new Date(last)) / 86400000;
+      due = diffDays >= AUTO_DAYS;
+    }
+    if (!due) return;
+    try {
+      window.exportBackup();
+      localStorage.setItem(AUTO_KEY, new Date().toISOString());
+      if (window.toast) window.toast("Auto-backup saved to your Downloads 💾");
+    } catch (e) { console.warn("auto-export failed", e); }
+  }
+
+  window.Backup = { supported, link, unlock, write, snapshot, latestSnapshot, refresh, state: () => status, autoExportCheck };
   init();
+  // run after the rest of the app has loaded (this script loads before app.js)
+  window.addEventListener("load", () => setTimeout(autoExportCheck, 1800));
 })();

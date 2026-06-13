@@ -61,6 +61,9 @@
     t.textContent = msg; t.classList.add("show");
     clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2200);
   };
+  // let the backup module trigger an export and surface messages
+  window.exportBackup = downloadExport;
+  window.toast = toast;
 
   // ---------------------------------------------------------------- TODAY ---
   function renderToday() {
