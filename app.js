@@ -43,11 +43,13 @@
   const ARUN_DONE = ["Averages", "Percentages", "Ratio, Proportion and Variation", "Alligations and Mixtures"];
   // The order chapters are tackled in: June batch (user's order) first, then July (book order).
   const QA_ORDER = [
+    // June batch
     "Profit, Loss and Discount", "Simple and Compound Interest", "Time and Work",
     "Time, Speed and Distance", "Applications of Time, Speed and Distance",
-    "Number Systems", "Progressions and Series", "Geometry and Mensuration",
-    "Coordinate Geometry", "Functions", "Inequalities", "Quadratic and Other Equations",
-    "Logarithms", "Permutations and Combinations", "Probability", "Set Theory",
+    // July batch — exact order you gave (Number Systems & Progressions last)
+    "Geometry and Mensuration", "Coordinate Geometry", "Functions", "Inequalities",
+    "Quadratic and Other Equations", "Logarithms", "Permutations and Combinations",
+    "Probability", "Set Theory", "Number Systems", "Progressions and Series",
   ];
 
   // ---- Full study plan: all four subjects, everything by 31 Aug ----
