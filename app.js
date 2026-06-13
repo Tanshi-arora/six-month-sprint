@@ -147,6 +147,40 @@
     return `<div class="recent-chips">${top.map((t, j) =>
       `<button class="chip-add" data-act="food:recent:${j}">${FoodDB.emojiFor(t.f.name)} ${esc(t.f.name)}</button>`).join("")}</div>`;
   }
+  // Canonical full plan (all four subjects, in order) built from the book lists.
+  function buildPlan() {
+    const plan = [];
+    ARUN_QA.forEach((it, i) => { const o = QA_ORDER.indexOf(it.name); plan.push({ ...it, subject: "qa", unit: SUB_META.qa.unit, ord: o === -1 ? 100 + i : o, done: ARUN_DONE.includes(it.name) }); });
+    DILR_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "dilr", unit: SUB_META.dilr.unit, ord: i, target: JUL, done: false }));
+    VARC_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "varc", unit: SUB_META.varc.unit, ord: i, target: JUL, done: false }));
+    VOCAB_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "vocab", unit: SUB_META.vocab.unit, ord: i, target: VOCAB_END, done: false }));
+    return plan;
+  }
+  // Merge the canonical plan into S.chapters. replace=true rebuilds DILR/VARC (for renames); progress preserved.
+  function applyPlan(replace) {
+    const plan = buildPlan();
+    if (replace) S.chapters = S.chapters.filter((c) => ["qa", "vocab"].includes(c.subject || "qa"));
+    const byName = {}; S.chapters.forEach((c) => { byName[c.name.toLowerCase()] = c; });
+    let added = 0, updated = 0;
+    for (const it of plan) {
+      const ex = byName[it.name.toLowerCase()];
+      if (ex) {
+        ex.total = it.total; ex.target = it.target; ex.subject = it.subject; ex.unit = it.unit; ex.ord = it.ord;
+        if (it.done) ex.startDone = it.total; else if (ex.startDone > it.total) ex.startDone = it.total;
+        updated++;
+      } else {
+        S.chapters.push({ id: "ch" + Math.random().toString(36).slice(2, 8), name: it.name, total: it.total, startDone: it.done ? it.total : 0, target: it.target, subject: it.subject, unit: it.unit, ord: it.ord });
+        added++;
+      }
+    }
+    return { added, updated };
+  }
+  // On load: if any plan item is missing (old data, never seeded), fill it in non-destructively.
+  function ensurePlan() {
+    const have = new Set(S.chapters.map((c) => c.name.toLowerCase()));
+    if (buildPlan().some((it) => !have.has(it.name.toLowerCase()))) { applyPlan(false); saveState(); }
+  }
+
   // Sequential plan for one subject on a given day: active item + today's target.
   function planFor(subject, dateKey) {
     const order = S.chapters
@@ -870,29 +904,7 @@
           S.chapters.push({ id: "ch" + Math.random().toString(36).slice(2, 8), name, total, startDone: done, target, subject, unit: SUB_META[subject].unit, ord });
           saveState(); render(); toast(`Added ${name}`);
         } else if (arg === "seed") {
-          // build the unified syllabus: subject, unit, order, target per item
-          const plan = [];
-          ARUN_QA.forEach((it, i) => { const o = QA_ORDER.indexOf(it.name); plan.push({ ...it, subject: "qa", unit: SUB_META.qa.unit, ord: o === -1 ? 100 + i : o, done: ARUN_DONE.includes(it.name) }); });
-          DILR_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "dilr", unit: SUB_META.dilr.unit, ord: i, target: JUL, done: false }));
-          VARC_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "varc", unit: SUB_META.varc.unit, ord: i, target: JUL, done: false }));
-          VOCAB_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "vocab", unit: SUB_META.vocab.unit, ord: i, target: VOCAB_END, done: false }));
-          // DILR/VARC are fully replaced by the book lists (so renamed topics don't duplicate); QA/vocab merge to keep progress.
-          S.chapters = S.chapters.filter((c) => ["qa", "vocab"].includes(c.subject || "qa"));
-          const byName = {};
-          S.chapters.forEach((c) => { byName[c.name.toLowerCase()] = c; });
-          let added = 0, updated = 0;
-          for (const it of plan) {
-            const ex = byName[it.name.toLowerCase()];
-            if (ex) {
-              ex.total = it.total; ex.target = it.target; ex.subject = it.subject; ex.unit = it.unit; ex.ord = it.ord;
-              if (it.done) ex.startDone = it.total;
-              else if (ex.startDone > it.total) ex.startDone = it.total;
-              updated++;
-            } else {
-              S.chapters.push({ id: "ch" + Math.random().toString(36).slice(2, 8), name: it.name, total: it.total, startDone: it.done ? it.total : 0, target: it.target, subject: it.subject, unit: it.unit, ord: it.ord });
-              added++;
-            }
-          }
+          const { added, updated } = applyPlan(true);
           saveState(); render();
           toast(added ? `Added ${added} items${updated ? `, updated ${updated}` : ""} across 4 subjects` : `Refreshed ${updated} syllabus items`);
         } else if (arg === "fresh") {
@@ -995,5 +1007,6 @@
     } else sessionStorage.setItem("t6-restore-declined", "1");
   })();
 
+  ensurePlan(); // auto-fill any missing DILR/VARC/Vocab/QA plan items so tiles always have tasks
   render();
 })();
