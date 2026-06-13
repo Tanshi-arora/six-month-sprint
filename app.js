@@ -78,8 +78,11 @@
     { name: "VA: Summary Questions", total: 15 }, { name: "RC: Reading Skills modules", total: 8 },
     { name: "RC: Critical Reasoning", total: 20 }, { name: "RC: LOD Practice Passages", total: 40 },
   ];
-  const VOCAB_ITEMS = [{ name: "Word Power Made Easy (sessions)", total: 50 }];
+  const VOCAB_ITEMS = [{ name: "Word Power Made Easy (sessions)", total: 47 }];
   const SUBJECTS = ["qa", "dilr", "varc", "vocab"];
+  const PLAN_SUBJECTS = ["qa", "vocab"]; // sequential, item-based plans (DILR/VARC are daily counters)
+  // CAT mock cadence by month
+  const MOCK_PLAN = "Jul: 1 / 2 weeks · Aug: 1 / week · Sep: 2 / week · Oct-Nov: 2-3 / week";
   const MEALS = [
     { id: "breakfast", name: "Breakfast" },
     { id: "lunch", name: "Lunch" },
@@ -289,7 +292,7 @@
         <p class="sub">One item per subject, in order. All books finish by 31 Aug (vocab ~3 Aug). Each target rebalances daily as you log.</p>
         ${(() => {
           if (!S.chapters.length) return `<div class="small muted">Build your plan in the Study tab (click "Load full study plan").</div>`;
-          const rows = SUBJECTS.map((s) => ({ s, plan: planFor(s, UI.dateKey) })).filter((x) => x.plan);
+          const rows = PLAN_SUBJECTS.map((s) => ({ s, plan: planFor(s, UI.dateKey) })).filter((x) => x.plan);
           if (!rows.length) return `<div class="small muted">Build your plan in the Study tab (click "Load full study plan").</div>`;
           return `<div class="splan">${rows.map(({ s, plan }) => {
             const m = SUB_META[s];
@@ -304,7 +307,7 @@
           }).join("")}</div>
           <div class="field-row mt12">
             <span class="hint">Custom log:</span>
-            <select class="input" id="qaChapter" style="flex:1">${SUBJECTS.map((s) => {
+            <select class="input" id="qaChapter" style="flex:1">${PLAN_SUBJECTS.map((s) => {
               const items = S.chapters.filter((c) => (c.subject || "qa") === s);
               return items.length ? `<optgroup label="${SUB_META[s].name}">${items.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</optgroup>` : "";
             }).join("")}</select>
@@ -318,16 +321,73 @@
         })()}
       </div>
 
-      <div class="card tint-purple">
-        <h3><span class="dot" style="background:var(--purple)"></span> Study Log</h3>
-        <p class="sub">DILR sets, RCs, Aeon essay or Norman Lewis vocab (same weightage)</p>
-        <div class="row"><span class="lbl">DILR sets today</span>
-          <span class="stepper"><button data-act="dilr:-1">−</button><span class="val">${r.dilr}</span><button data-act="dilr:1">+</button></span></div>
-        <div class="row"><span class="lbl">RCs today</span>
-          <span class="stepper"><button data-act="rc:-1">−</button><span class="val">${r.rc}</span><button data-act="rc:1">+</button></span></div>
-        <div class="row"><span class="lbl">Aeon essay read</span><button class="check ${r.aeon ? "on" : ""}" data-act="aeon">✓</button></div>
-        <div class="row"><span class="lbl">Norman Lewis pages</span><input class="input sm" type="number" min="0" value="${r.vocabPages || ""}" placeholder="pages" data-act="vocab:pages"></div>
-        <div class="row"><span class="hint">Week: DILR ${dw.sets}/12 · RC ${rw.rcs}/10 · Aeon/Vocab ${aw.essays}/7${aw.pages ? ` · ${aw.pages} pages` : ""}</span></div>
+      <div class="card tint-purple span-2">
+        <h3><span class="dot" style="background:var(--purple)"></span> Daily Study Log</h3>
+        <p class="sub">DILR & VARC are light daily habits (1/day min). Reading 20 min/day. Log your study hours.</p>
+        <div class="dgrid">
+          <div class="dcell"><span class="lbl">DILR sets attempted</span>
+            <span class="stepper"><button data-act="dilrAtt:-1">−</button><span class="val">${r.dilrAtt || 0}</span><button data-act="dilrAtt:1">+</button></span></div>
+          <div class="dcell"><span class="lbl">DILR sets solved</span>
+            <span class="stepper"><button data-act="dilrSol:-1">−</button><span class="val">${r.dilrSol || 0}</span><button data-act="dilrSol:1">+</button></span></div>
+          <div class="dcell"><span class="lbl">RCs completed</span>
+            <span class="stepper"><button data-act="rc:-1">−</button><span class="val">${r.rc || 0}</span><button data-act="rc:1">+</button></span></div>
+          <div class="dcell"><span class="lbl">VA exercises</span>
+            <span class="stepper"><button data-act="va:-1">−</button><span class="val">${r.va || 0}</span><button data-act="va:1">+</button></span></div>
+          <div class="dcell"><span class="lbl">Reading minutes <span class="hint">goal 20</span></span>
+            <input class="input sm" type="number" min="0" value="${r.readMin || ""}" placeholder="min" data-act="read:min"></div>
+          <div class="dcell"><span class="lbl">Study hours today</span>
+            <input class="input sm" type="number" min="0" step="0.5" value="${r.hours || ""}" placeholder="hrs" data-act="study:hours"></div>
+        </div>
+        <div class="row mt8"><span class="hint">This week</span><b>DILR ${dw.sets}/7 solved${dw.att ? ` (${dw.att} att)` : ""} · RC ${rw.rcs}/7 · VA ${Score.vaWeek(d).ex}/7 · Reading ${Score.readingWeek(d).days}/7d</b></div>
+        <div class="row"><span class="hint">🔥 Reading streak</span><b>${Score.readingStreak()} day${Score.readingStreak() === 1 ? "" : "s"}</b></div>
+      </div>
+    </div>
+
+    <div class="grid cols-2 mt16">
+      <div class="card tint-indigo">
+        <h3><span class="dot" style="background:var(--indigo)"></span> Mocks</h3>
+        <p class="sub">${MOCK_PLAN}</p>
+        <div class="field-row">
+          <input class="input" id="mkName" placeholder="Mock name (e.g. AIMCAT 1)" style="flex:1.4">
+          <input class="input sm" id="mkScore" type="number" placeholder="Score">
+          <input class="input sm" id="mkPct" type="number" step="0.01" placeholder="%ile">
+          <button class="btn primary" data-act="mock:add">+ Log</button>
+        </div>
+        <input class="input mt8" id="mkNote" placeholder="Key lesson learned (optional)">
+        ${(S.mocks && S.mocks.length) ? `<table class="tbl mt12"><thead><tr><th>Mock</th><th>Score</th><th>%ile</th><th>Lesson</th><th></th></tr></thead><tbody>
+          ${S.mocks.slice().reverse().map((m) => `<tr>
+            <td><b>${esc(m.name || "Mock")}</b><div class="hint">${m.date ? fmtShort(parseKey(m.date)) : ""}</div></td>
+            <td class="num">${m.score ?? "–"}</td><td class="num">${m.percentile != null ? m.percentile + "%ile" : "–"}</td>
+            <td class="small">${esc(m.note || "")}</td>
+            <td><button class="iconbtn" data-act="mock:del:${m.id}">✕</button></td></tr>`).join("")}
+        </tbody></table>` : `<div class="empty">No mocks yet. First one mid-July.</div>`}
+        <div class="row mt8"><span class="hint">Mocks taken</span><b>${(S.mocks || []).length}</b></div>
+      </div>
+
+      <div class="card">
+        <h3><span class="dot" style="background:var(--teal)"></span> Status</h3>
+        <p class="sub">Where you stand against the plan, recomputed live</p>
+        ${(() => {
+          const qc = Score.qaChapters().filter((c) => Score.chapterStats(c).remaining > 0 && c.target);
+          if (!qc.length) return `<div class="empty">Load your study plan in the Study tab to see status.</div>`;
+          // ahead/behind: avg actual daily pace (last 14d) vs required pace
+          let req = 0; qc.forEach((c) => { req += Score.chapterStats(c).pace || 0; });
+          const todayK = fmtKey(today());
+          let recent = 0, days = 0;
+          for (let i = 1; i <= 14; i++) { const k = fmtKey(addDays(today(), -i)); const rr = S.days[k]; if (rr && rr.qa) { recent += Score.qaChapters().reduce((a, c) => a + (rr.qa[c.id] || 0), 0); days++; } }
+          const avg = days ? recent / 14 : 0;
+          const ratio = req ? avg / req : 0;
+          const status = avg === 0 ? "Not started" : ratio >= 0.95 ? "On Track" : ratio >= 0.7 ? "Slightly Behind" : "Behind";
+          const cls = status === "On Track" ? "good" : status === "Behind" ? "low" : "mid";
+          const nextDate = qc.map((c) => Score.chapterStats(c).expected).filter((x) => x && x !== "Done");
+          const risk = qc.filter((c) => { const st = Score.chapterStats(c); return st.daysLeft != null && st.daysLeft <= 7 && st.remaining > st.pace * st.daysLeft * 1.1; });
+          return `
+            <div class="row"><span class="lbl">QA pace</span><span class="pill ${cls}">${status}</span></div>
+            <div class="row"><span class="lbl">Required today (QA)</span><b>${req} Qs</b></div>
+            <div class="row"><span class="lbl">Your 14-day avg</span><b>${Math.round(avg)} Qs/day</b></div>
+            <div class="row"><span class="lbl">Vocab finishes</span><b>${(() => { const v = planFor("vocab", todayK); return v && !v.done ? (v.current.st.expected || "on pace") : "done"; })()}</b></div>
+            ${risk.length ? `<div class="mt8 small" style="color:var(--red)">⚠ Tight on deadline: ${risk.map((c) => esc(c.name)).join(", ")}. I'd nudge these up or move them to the July batch.</div>` : `<div class="mt8 small muted">No deadline risks right now. Keep the daily target and you finish on time.</div>`}`;
+        })()}
       </div>
     </div>`;
   }
@@ -357,26 +417,37 @@
       </div>
     </div>
 
-    <div class="grid cols-4 mt16">
-      ${SUBJECTS.map((s) => { const m = SUB_META[s]; const p = subPct(s);
-        return `<div class="card" style="background:linear-gradient(180deg,${m.soft},#fff 72%)"><div class="ringbox">${C.ring(p ?? 0, { size: 104, color: m.color, label: `${m.name} book`, sub: "complete" })}</div></div>`;
-      }).join("")}
-    </div>
+    ${(() => {
+      let dilrTot = 0, rcTot = 0, vaTot = 0, readDays = 0;
+      for (const k in S.days) { const rr = S.days[k]; dilrTot += (rr.dilrSol != null ? rr.dilrSol : rr.dilr) || 0; rcTot += rr.rc || 0; vaTot += rr.va || 0; if ((rr.readMin || 0) >= 20) readDays++; }
+      return `<div class="grid cols-4 mt16">
+        <div class="card" style="background:linear-gradient(180deg,${SUB_META.qa.soft},#fff 72%)"><div class="ringbox">${C.ring(subPct("qa") ?? 0, { size: 104, color: SUB_META.qa.color, label: "QA book", sub: "complete" })}</div></div>
+        <div class="card" style="background:linear-gradient(180deg,${SUB_META.vocab.soft},#fff 72%)"><div class="ringbox">${C.ring(subPct("vocab") ?? 0, { size: 104, color: SUB_META.vocab.color, label: "Vocab (WPME)", sub: "complete" })}</div></div>
+        <div class="card" style="background:linear-gradient(180deg,${SUB_META.dilr.soft},#fff 72%)"><h3 style="margin-bottom:10px">DILR & VARC</h3>
+          <div class="row"><span class="lbl">DILR sets solved</span><b>${dilrTot}</b></div>
+          <div class="row"><span class="lbl">RCs done</span><b>${rcTot}</b></div>
+          <div class="row"><span class="lbl">VA exercises</span><b>${vaTot}</b></div>
+          <div class="row"><span class="hint">This week</span><b>${Score.dilrWeek(d).sets} · ${Score.rcWeek(d).rcs} · ${Score.vaWeek(d).ex}</b></div></div>
+        <div class="card" style="background:linear-gradient(180deg,${SUB_META.varc.soft},#fff 72%)"><h3 style="margin-bottom:10px">Reading</h3>
+          <div class="ringbox" style="text-align:center"><div style="font-size:38px;font-weight:800;letter-spacing:-.02em">🔥 ${Score.readingStreak()}</div><div class="ring-label">day streak (20+ min)</div></div>
+          <div class="row mt8"><span class="hint">Days hit this week</span><b>${Score.readingWeek(d).days}/7</b></div></div>
+      </div>`;
+    })()}
 
     <div class="card mt16">
       <h3>Full Syllabus <span class="muted small">all books by 31 Aug · daily plan drives the Today tab</span></h3>
-      <p class="sub">Per-item completion, remaining units and the pace to hit each deadline. Counts for DILR/VARC are estimates, edit any row.</p>
+      <p class="sub">QA chapters (Jun/Jul) and vocab sessions. DILR & VARC are tracked as daily counters on the Today tab.</p>
       <div class="field-row">
         <input class="input" id="chName" placeholder="Item name" style="flex:2">
-        <select class="input sm" id="chSubject" style="width:90px">${SUBJECTS.map((s) => `<option value="${s}">${SUB_META[s].name}</option>`).join("")}</select>
+        <select class="input sm" id="chSubject" style="width:90px">${PLAN_SUBJECTS.map((s) => `<option value="${s}">${SUB_META[s].name}</option>`).join("")}</select>
         <input class="input sm" id="chTotal" type="number" min="1" placeholder="Total">
         <input class="input sm" id="chDone" type="number" min="0" placeholder="Done">
         <input class="input" id="chTarget" type="date" style="width:150px">
         <button class="btn primary" data-act="ch:add">+ Add</button>
       </div>
-      <div class="mt8"><button class="btn primary" data-act="ch:seed">📚 Load full study plan</button>
-        <span class="small muted">QA + DILR + VARC + Vocab with counts &amp; deadlines · keeps your progress · re-click to refresh</span></div>
-      ${SUBJECTS.map((s) => {
+      <div class="mt8"><button class="btn primary" data-act="ch:seed">📚 Load study plan (QA + Vocab)</button>
+        <span class="small muted">20 QA chapters with counts &amp; Jun/Jul deadlines + Word Power (47 sessions) · keeps progress · re-click to refresh</span></div>
+      ${PLAN_SUBJECTS.map((s) => {
         const items = S.chapters.filter((c) => (c.subject || "qa") === s).sort((a, b) => (a.ord ?? 99) - (b.ord ?? 99));
         if (!items.length) return "";
         const m = SUB_META[s];
@@ -745,7 +816,24 @@
       case "vit": patchDay({ [arg]: !r[arg] }); break;
       case "aeon": patchDay({ aeon: !r.aeon }); break;
       case "dilr": patchDay({ dilr: Math.max(0, (r.dilr || 0) + Number(arg)) }); break;
+      case "dilrAtt": patchDay({ dilrAtt: Math.max(0, (r.dilrAtt || 0) + Number(arg)) }); break;
+      case "dilrSol": patchDay({ dilrSol: Math.max(0, (r.dilrSol || 0) + Number(arg)) }); break;
       case "rc": patchDay({ rc: Math.max(0, (r.rc || 0) + Number(arg)) }); break;
+      case "va": patchDay({ va: Math.max(0, (r.va || 0) + Number(arg)) }); break;
+      case "mock":
+        if (arg === "add") {
+          const name = (document.getElementById("mkName").value || "").trim();
+          const score = parseFloat(document.getElementById("mkScore").value);
+          const pct = parseFloat(document.getElementById("mkPct").value);
+          const note = (document.getElementById("mkNote").value || "").trim();
+          if (!name && isNaN(score)) { toast("Add a mock name or score"); break; }
+          S.mocks = S.mocks || [];
+          S.mocks.push({ id: "mk" + Math.random().toString(36).slice(2, 8), date: fmtKey(today()), name: name || "Mock", score: isNaN(score) ? null : score, percentile: isNaN(pct) ? null : pct, note });
+          saveState(); render(); toast("Mock logged");
+        } else if (arg === "del") {
+          S.mocks = (S.mocks || []).filter((m) => m.id !== arg2); saveState(); render();
+        }
+        break;
       case "qa":
         if (arg === "log") {
           const sel = document.getElementById("qaChapter"), cnt = document.getElementById("qaCount");
@@ -807,9 +895,9 @@
           // build the unified syllabus: subject, unit, order, target per item
           const plan = [];
           ARUN_QA.forEach((it, i) => { const o = QA_ORDER.indexOf(it.name); plan.push({ ...it, subject: "qa", unit: SUB_META.qa.unit, ord: o === -1 ? 100 + i : o, done: ARUN_DONE.includes(it.name) }); });
-          DILR_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "dilr", unit: SUB_META.dilr.unit, ord: i, target: AUG, done: false }));
-          VARC_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "varc", unit: SUB_META.varc.unit, ord: i, target: AUG, done: false }));
           VOCAB_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "vocab", unit: SUB_META.vocab.unit, ord: i, target: VOCAB_END, done: false }));
+          // DILR & VARC are tracked as light daily counters, not topic-grinds; drop any old topic items.
+          S.chapters = S.chapters.filter((c) => { const s = c.subject || "qa"; return s === "qa" || s === "vocab"; });
           const byName = {};
           S.chapters.forEach((c) => { byName[c.name.toLowerCase()] = c; });
           let added = 0, updated = 0;
@@ -884,6 +972,8 @@
       }
     }
     if (el.matches('[data-act="vocab:pages"]')) { setDay(UI.dateKey, { vocabPages: Math.max(0, parseInt(el.value, 10) || 0) }); render(); }
+    if (el.matches('[data-act="read:min"]')) { setDay(UI.dateKey, { readMin: Math.max(0, parseInt(el.value, 10) || 0) }); render(); }
+    if (el.matches('[data-act="study:hours"]')) { setDay(UI.dateKey, { hours: Math.max(0, parseFloat(el.value) || 0) }); render(); }
     if (el.id === "importFile" && el.files[0]) {
       const fr = new FileReader();
       fr.onload = () => {

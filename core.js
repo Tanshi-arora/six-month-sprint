@@ -7,6 +7,7 @@
     settings: { calTarget: 1200, proteinTarget: 90 },
     chapters: [], // {id, name, total, startDone, target:"YYYY-MM-DD"}
     days: {}, // key -> day record
+    mocks: [], // {id, date, name, score, percentile, note}
   });
 
   const DEFAULT_DAY = () => ({
@@ -18,9 +19,12 @@
     steps10k: false,
     iron: false, b12: false, vitd: false,
     foods: [],             // {name, qty, unit, cal, p, meal}
-    qa: {},                // chapterId -> questions done that day
-    dilr: 0, rc: 0, aeon: false,
-    vocabPages: 0,         // Norman Lewis pages read today
+    qa: {},                // chapterId -> questions/sessions done that day (QA + Vocab items)
+    dilrAtt: 0, dilrSol: 0, // DILR sets attempted / solved
+    rc: 0, va: 0,          // RCs completed / Verbal Ability exercises
+    readMin: 0,            // reading minutes (goal 20)
+    hours: 0,              // study hours logged
+    dilr: 0, aeon: false, vocabPages: 0, // legacy fields kept for back-compat
   });
 
   function load() {
@@ -179,18 +183,41 @@
   function weekSum(d, field) {
     return weekKeys(d).reduce((a, k) => a + ((S.days[k] && S.days[k][field]) || 0), 0);
   }
-  function weekAeon(d) { return weekKeys(d).filter((k) => S.days[k] && S.days[k].aeon).length; }
-
-  function dilrWeek(d) { const sets = weekSum(d, "dilr"); return { sets, score: clamp((sets / 12) * 100) }; }
-  function rcWeek(d) { const rcs = weekSum(d, "rc"); return { rcs, score: clamp((rcs / 10) * 100) }; }
-  // Aeon essay OR Norman Lewis vocab pages both satisfy the daily reading habit (same weightage).
-  function aeonWeek(d) {
+  // DILR: track sets attempted & solved (legacy `dilr` counts as solved). Goal ~1/day = 7/week.
+  function dilrWeek(d) {
     const keys = weekKeys(d);
-    const essays = keys.filter((k) => S.days[k] && (S.days[k].aeon || (S.days[k].vocabPages || 0) > 0)).length;
-    const pages = keys.reduce((a, k) => a + ((S.days[k] && S.days[k].vocabPages) || 0), 0);
-    return { essays, pages, score: clamp((essays / 7) * 100) };
+    const att = keys.reduce((a, k) => { const r = S.days[k]; return a + ((r && (r.dilrAtt || 0)) || 0); }, 0);
+    const sol = keys.reduce((a, k) => { const r = S.days[k]; return a + ((r && (r.dilrSol != null ? r.dilrSol : r.dilr)) || 0); }, 0);
+    return { att, sets: sol, score: clamp((sol / 7) * 100) };
   }
-  function varcWeek(d) { return rnd((rcWeek(d).score + aeonWeek(d).score) / 2); }
+  function rcWeek(d) { const rcs = weekSum(d, "rc"); return { rcs, score: clamp((rcs / 7) * 100) }; }
+  // VARC daily habit = 1 RC OR 1 VA exercise. 7/week target.
+  function vaWeek(d) { const ex = weekSum(d, "va"); return { ex, score: clamp((ex / 7) * 100) }; }
+  function aeonWeek(d) { // kept name for reports compatibility; now = RC+VA activity days
+    const keys = weekKeys(d);
+    const days = keys.filter((k) => { const r = S.days[k]; return r && ((r.rc || 0) > 0 || (r.va || 0) > 0); }).length;
+    return { essays: days, pages: 0, score: clamp((days / 7) * 100) };
+  }
+  function varcWeek(d) { return rnd((rcWeek(d).score + vaWeek(d).score) / 2); }
+
+  // Reading: minutes/day (goal 20) and current consecutive-day streak.
+  function readingWeek(d) {
+    const keys = weekKeys(d);
+    const mins = keys.reduce((a, k) => a + ((S.days[k] && S.days[k].readMin) || 0), 0);
+    const days = keys.filter((k) => S.days[k] && (S.days[k].readMin || 0) >= 20).length;
+    return { mins, days, score: clamp((days / 7) * 100) };
+  }
+  function readingStreak() {
+    let streak = 0;
+    for (let i = 0; i < 400; i++) {
+      const k = fmtKey(addDays(today(), -i));
+      const r = S.days[k];
+      if (r && (r.readMin || 0) >= 20) streak++;
+      else if (i === 0) continue; // today not yet logged doesn't break the streak
+      else break;
+    }
+    return streak;
+  }
 
   function studyScore(d) {
     const qa = qaScore() ?? 0;
@@ -234,16 +261,16 @@
     const vitamins = rnd((vitDone / (r.vitd ? 3 : 2)) * 100);
     const diet = dietDay(key).score ?? 0;
     // study: QA vs today's required pace, DILR vs ~2 sets/day, RC vs ~1.5/day, Aeon/vocab done
-    const qaToday = Object.values(r.qa || {}).reduce((a, b) => a + b, 0);
+    const qc = qaChapters();
+    const qaToday = qc.reduce((a, ch) => a + ((r.qa || {})[ch.id] || 0), 0);
     let paceTarget = 0;
-    for (const ch of S.chapters) { const st = chapterStats(ch); if (st.pace && st.remaining > 0) paceTarget += st.pace; }
+    for (const ch of qc) { const st = chapterStats(ch); if (st.pace && st.remaining > 0) paceTarget += st.pace; }
     let qaDaily = null;
     if (paceTarget > 0) qaDaily = clamp((qaToday / paceTarget) * 100);
-    else if (S.chapters.length) qaDaily = qaToday > 0 ? 100 : 0;
-    const dilrDaily = clamp(((r.dilr || 0) / 2) * 100);
-    const rcDaily = clamp(((r.rc || 0) / 1.5) * 100);
-    const readDaily = (r.aeon || (r.vocabPages || 0) > 0) ? 100 : 0;
-    const varcDaily = rnd((rcDaily + readDaily) / 2);
+    else if (qc.length) qaDaily = qaToday > 0 ? 100 : 0;
+    const dilrSol = r.dilrSol != null ? r.dilrSol : (r.dilr || 0);
+    const dilrDaily = clamp(dilrSol * 100);              // 1 set/day minimum
+    const varcDaily = clamp(((r.rc || 0) + (r.va || 0)) * 100); // 1 RC or VA exercise/day
     const study = qaDaily == null
       ? rnd(dilrDaily * 0.6 + varcDaily * 0.4)
       : rnd(qaDaily * 0.5 + dilrDaily * 0.3 + varcDaily * 0.2);
@@ -272,7 +299,7 @@
     total += 2; if (r.iron) done++; if (r.b12) done++;
     total++; if (r.foods && r.foods.length) done++;
     total++;
-    const anyStudy = (r.dilr || 0) > 0 || (r.rc || 0) > 0 || r.aeon || (r.vocabPages || 0) > 0 || Object.values(r.qa || {}).some((v) => v > 0);
+    const anyStudy = (r.dilrSol || r.dilr || 0) > 0 || (r.dilrAtt || 0) > 0 || (r.rc || 0) > 0 || (r.va || 0) > 0 || (r.readMin || 0) > 0 || Object.values(r.qa || {}).some((v) => v > 0);
     if (anyStudy) done++;
     return rnd((done / total) * 100);
   }
@@ -282,7 +309,7 @@
     wakeWeek, officeMonth, gymWeek, vitaminsWeek,
     proteinScore, calorieScore, dietDay, dietWeek,
     chapterDone, chapterStats, qaScore, qaChapters,
-    dilrWeek, rcWeek, aeonWeek, varcWeek, studyScore,
+    dilrWeek, rcWeek, vaWeek, aeonWeek, varcWeek, studyScore, readingWeek, readingStreak,
     categoryScores, overallScore, readinessScore, dailyActivity,
     dailyScores, overallToday,
   };
