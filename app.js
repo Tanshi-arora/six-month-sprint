@@ -336,7 +336,7 @@
         <div class="row"><span class="hint">Week doses</span><b>${vw.done}/15 · ${Math.round(vw.score)}%</b></div>
       </div>
 
-      <div class="card span-3 tint-green">
+      <div class="card span-2 tint-green">
         <h3><span class="dot" style="background:var(--green)"></span> Diet Log</h3>
         <p class="sub">Targets: ${calT} kcal · ${proT}g protein <button class="iconbtn" data-act="diet:targets">edit</button> · Diet score today: <b>${diet.score == null ? "–" : diet.score + "%"}</b></p>
         <div class="macro-bars">
