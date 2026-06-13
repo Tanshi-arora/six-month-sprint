@@ -33,11 +33,9 @@
       const raw = localStorage.getItem(LS_KEY);
       if (raw) {
         const st = Object.assign(DEFAULT_STATE(), JSON.parse(raw));
-        const t = new Date(), p = (n) => String(n).padStart(2, "0");
-        const todayKey = `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`;
         let purged = false;
-        // calendar starts 14 Jun; drop anything before it or in the future (no "tomorrow" data)
-        for (const k of Object.keys(st.days)) { if (k < PLAN_START || k > todayKey) { delete st.days[k]; purged = true; } }
+        // calendar starts 14 Jun; drop anything logged before it
+        for (const k of Object.keys(st.days)) { if (k < PLAN_START) { delete st.days[k]; purged = true; } }
         st._purged = purged;
         return st;
       }

@@ -185,8 +185,8 @@
     <div class="datenav">
       <button class="navbtn" data-act="date:-1" ${UI.dateKey <= PLAN_START ? "disabled" : ""}>‹</button>
       <span class="when">${fmtNice(d)}</span>
-      <button class="navbtn" data-act="date:1" ${isToday ? "disabled" : ""}>›</button>
-      <input type="date" value="${UI.dateKey}" min="${PLAN_START}" max="${fmtKey(today())}" data-act="date:set">
+      <button class="navbtn" data-act="date:1">›</button>
+      <input type="date" value="${UI.dateKey}" min="${PLAN_START}" data-act="date:set">
       <span class="chip ${working ? "work" : "off"}">${working ? "Working day" : "Off day"}</span>
       ${isToday ? "" : `<span class="chip today-link" data-act="date:today">Back to today</span>`}
     </div>
@@ -734,7 +734,7 @@
         if (arg === "today") UI.dateKey = fmtKey(today());
         else if (arg !== "set") {
           const nd = fmtKey(addDays(selDate(), Number(arg)));
-          if (nd >= PLAN_START && nd <= fmtKey(today())) UI.dateKey = nd; // no past-start / no future
+          if (nd >= PLAN_START) UI.dateKey = nd; // floored at 14 Jun; free to move forward
         }
         render(); break;
       case "wake": patchDay({ wake: arg === "yes" ? (r.wake === true ? null : true) : (r.wake === false ? null : false) }); break;
@@ -922,8 +922,8 @@
   document.addEventListener("change", (e) => {
     const el = e.target;
     if (el.matches('input[type=date][data-act="date:set"]') && el.value) {
-      let v = el.value, tk = fmtKey(today());
-      if (v < PLAN_START) v = PLAN_START; if (v > tk) v = tk; // clamp to [start, today]
+      let v = el.value;
+      if (v < PLAN_START) v = PLAN_START; // floor at 14 Jun; forward open
       UI.dateKey = v; render();
     }
     if (el.matches('[data-act="gym:cal"]')) setDay(UI.dateKey, { gymCal: parseInt(el.value, 10) || null });
