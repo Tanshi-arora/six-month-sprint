@@ -300,7 +300,7 @@
           <button class="${r.wake === true ? "on yes" : ""}" data-act="wake:yes">Woke up ✓</button>
           <button class="${r.wake === false ? "on no" : ""}" data-act="wake:no">Missed</button>
         </div>
-        <div class="row mt12"><span class="hint">This week</span><b>${ww.yes}/7 days · ${Math.round(ww.score)}%</b></div>
+        <div class="row mt12"><span class="hint">This week</span><b>${ww.yes}/${ww.target} days · ${Math.round(ww.score)}%</b></div>
       </div>
 
       <div class="card tint-purple">
@@ -324,7 +324,7 @@
           </select></div>
         <div class="row"><span class="lbl">Calories burned</span><input class="input sm" type="number" value="${r.gymCal ?? ""}" placeholder="kcal" data-act="gym:cal"></div>` : ""}
         <div class="row"><span class="lbl">10,000+ steps</span><button class="check ${r.steps10k ? "on" : ""}" data-act="gym:steps">✓</button></div>
-        <div class="row"><span class="hint">This week</span><b>${gw.classes}/4 classes${gw.stepDays ? ` +${gw.stepDays} step day${gw.stepDays > 1 ? "s" : ""}` : ""} · ${Math.round(gw.score)}%</b></div>
+        <div class="row"><span class="hint">This week</span><b>${gw.classes}/${gw.target} classes${gw.stepDays ? ` +${gw.stepDays} step day${gw.stepDays > 1 ? "s" : ""}` : ""} · ${Math.round(gw.score)}%</b></div>
       </div>
 
       <div class="card tint-pink">
@@ -333,7 +333,7 @@
         <div class="row"><span class="lbl">Iron</span><button class="check ${r.iron ? "on" : ""}" data-act="vit:iron">✓</button></div>
         <div class="row"><span class="lbl">B12</span><button class="check ${r.b12 ? "on" : ""}" data-act="vit:b12">✓</button></div>
         <div class="row"><span class="lbl">Vitamin D <span class="hint">${vw.vitd ? "done this week" : "due this week"}</span></span><button class="check ${r.vitd ? "on" : ""}" data-act="vit:vitd">✓</button></div>
-        <div class="row"><span class="hint">Week doses</span><b>${vw.done}/15 · ${Math.round(vw.score)}%</b></div>
+        <div class="row"><span class="hint">Week doses</span><b>${vw.done}/${vw.required} · ${Math.round(vw.score)}%</b></div>
       </div>
 
       <div class="card span-2 tint-green">
@@ -642,11 +642,11 @@
           <div class="statline"><span>RCs</span><b>${w.rc.rcs}/10 · ${Math.round(w.rc.score)}%</b></div>
           <div class="statline"><span>Aeon / Vocab days${w.aeon.pages ? ` (${w.aeon.pages} Norman Lewis pages)` : ""}</span><b>${w.aeon.essays}/7 · ${Math.round(w.aeon.score)}%</b></div>
           <h4>Health & routine</h4>
-          <div class="statline"><span>Gym classes${w.gym.types.length ? ` (${w.gym.types.join(", ")})` : ""}</span><b>${w.gym.classes}/4${w.gym.stepDays ? ` (+${w.gym.stepDays} step days)` : ""} · ${Math.round(w.gym.score)}%</b></div>
+          <div class="statline"><span>Gym classes${w.gym.types.length ? ` (${w.gym.types.join(", ")})` : ""}</span><b>${w.gym.classes}/${w.gym.target}${w.gym.stepDays ? ` (+${w.gym.stepDays} step days)` : ""} · ${Math.round(w.gym.score)}%</b></div>
           <div class="statline"><span>Diet (days logged: ${w.diet.days})</span><b>${w.diet.score == null ? "no logs" : w.diet.score + "%"}</b></div>
-          <div class="statline"><span>Wake-ups</span><b>${w.wake.yes}/7 · ${Math.round(w.wake.score)}%</b></div>
-          <div class="statline"><span>Office (full month)</span><b>${w.office.attended}/${w.office.expected} · ${w.office.score == null ? "–" : Math.round(w.office.score) + "%"}</b></div>
-          <div class="statline"><span>Vitamins</span><b>${w.vit.done}/15 · ${Math.round(w.vit.score)}%</b></div>
+          <div class="statline"><span>Wake-ups</span><b>${w.wake.yes}/${w.wake.target} · ${Math.round(w.wake.score)}%</b></div>
+          <div class="statline"><span>Office (from 14 Jun)</span><b>${w.office.attended}/${w.office.expected} · ${w.office.score == null ? "–" : Math.round(w.office.score) + "%"}</b></div>
+          <div class="statline"><span>Vitamins</span><b>${w.vit.done}/${w.vit.required} · ${Math.round(w.vit.score)}%</b></div>
           <h4>🏆 Weekly Wins</h4><ul class="cleanlist wins">${winLines.join("")}</ul>
           <h4>🔧 Areas to Improve</h4><ul class="cleanlist improve">${improveLines.join("")}</ul>
           <h4>🎯 Next Week Focus</h4><ul class="cleanlist focus">${focus.map((e, i) => `<li><b>${i + 1}. ${e.name}:</b> ${FOCUS[e.id]}</li>`).join("")}</ul>

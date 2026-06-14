@@ -92,21 +92,27 @@
   const clamp = (v) => Math.max(0, Math.min(100, v));
   const rnd = (v) => Math.round(v);
 
-  function wakeWeek(d) {
-    const keys = weekKeys(d);
-    const yes = keys.filter((k) => S.days[k] && S.days[k].wake === true).length;
-    return { yes, score: clamp((yes / 7) * 100) };
+  // Days of a week that actually count: on/after the plan start AND not in the future.
+  // Lets goals prorate when you start mid-week (e.g. starting on Sunday = only 1 day this week).
+  function weekAvail(d) {
+    const tk = fmtKey(today());
+    return weekKeys(d).filter((k) => k >= PLAN_START && k <= tk).length;
   }
 
-  // Expected = ALL working days in the month (Mon-Fri + 2nd/4th/5th Sat), not just elapsed ones.
+  function wakeWeek(d) {
+    const yes = weekKeys(d).filter((k) => S.days[k] && S.days[k].wake === true).length;
+    const target = Math.max(1, weekAvail(d));
+    return { yes, target, score: clamp((yes / target) * 100) };
+  }
+
+  // Expected = working days in the month from the plan start onward (don't count days before tracking began).
   function officeMonth(d) {
-    const keys = monthKeys(d);
     let expected = 0, attended = 0, wfh = 0, absent = 0;
-    for (const k of keys) {
-      const day = parseKey(k);
+    for (const k of monthKeys(d)) {
+      if (k < PLAN_START) continue;
       const rec = S.days[k];
       if (rec && rec.office === "wfh") wfh++;
-      if (!isWorkingDay(day)) continue;
+      if (!isWorkingDay(parseKey(k))) continue;
       expected++;
       if (rec && (rec.office === "office" || rec.office === "wfh")) attended++;
       if (rec && rec.office === "absent") absent++;
@@ -115,25 +121,26 @@
   }
 
   function gymWeek(d) {
-    const keys = weekKeys(d);
     let classes = 0, stepDays = 0, cal = 0; const types = [];
-    for (const k of keys) {
+    for (const k of weekKeys(d)) {
       const r = S.days[k]; if (!r) continue;
       if (r.gymClass) { classes++; cal += r.gymCal || 0; if (r.gymType) types.push(r.gymType); }
       else if (r.steps10k) stepDays++;
     }
-    return { classes, stepDays, cal, types, score: clamp(classes * 25 + stepDays * 25) };
+    const target = Math.max(1, Math.round((4 * weekAvail(d)) / 7)); // 4/week, prorated to days available
+    return { classes, stepDays, cal, types, target, score: clamp(((classes + stepDays) / target) * 100) };
   }
 
   function vitaminsWeek(d) {
-    const keys = weekKeys(d);
     let iron = 0, b12 = 0, vitd = 0;
-    for (const k of keys) {
+    for (const k of weekKeys(d)) {
       const r = S.days[k]; if (!r) continue;
       if (r.iron) iron++; if (r.b12) b12++; if (r.vitd) vitd++;
     }
+    const avail = weekAvail(d);
     const done = iron + b12 + Math.min(1, vitd);
-    return { iron, b12, vitd: Math.min(1, vitd), done, score: clamp((done / 15) * 100) };
+    const required = avail * 2 + (avail > 0 ? 1 : 0); // Iron + B12 each available day, + 1 Vitamin D/week
+    return { iron, b12, vitd: Math.min(1, vitd), done, required, score: required ? clamp((done / required) * 100) : 0 };
   }
 
   function proteinScore(g) { return g >= 90 ? 100 : g >= 80 ? 90 : g >= 70 ? 75 : g >= 60 ? 50 : 25; }
