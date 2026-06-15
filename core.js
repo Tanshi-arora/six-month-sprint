@@ -27,14 +27,14 @@
     dilr: 0, aeon: false, vocabPages: 0, // legacy fields kept for back-compat
   });
 
-  const PLAN_START = "2026-06-14"; // the tracker begins here; earlier day-logs are dropped
+  const PLAN_START = "2026-06-15"; // the tracker begins here; earlier day-logs are dropped
   function load() {
     try {
       const raw = localStorage.getItem(LS_KEY);
       if (raw) {
         const st = Object.assign(DEFAULT_STATE(), JSON.parse(raw));
         let purged = false;
-        // calendar starts 14 Jun; drop anything logged before it
+        // calendar starts 15 Jun; drop anything logged before it
         for (const k of Object.keys(st.days)) { if (k < PLAN_START) { delete st.days[k]; purged = true; } }
         st._purged = purged;
         return st;
@@ -92,11 +92,10 @@
   const clamp = (v) => Math.max(0, Math.min(100, v));
   const rnd = (v) => Math.round(v);
 
-  // Days of a week that actually count: on/after the plan start AND not in the future.
-  // Lets goals prorate when you start mid-week (e.g. starting on Sunday = only 1 day this week).
+  // Days of a week that belong to the plan (on/after the start). Full weeks = 7; a week that
+  // straddles the start date counts only its in-plan days, so targets aren't unfairly inflated.
   function weekAvail(d) {
-    const tk = fmtKey(today());
-    return weekKeys(d).filter((k) => k >= PLAN_START && k <= tk).length;
+    return weekKeys(d).filter((k) => k >= PLAN_START).length;
   }
 
   function wakeWeek(d) {

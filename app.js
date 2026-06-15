@@ -106,7 +106,8 @@
   const VOCAB_ITEMS = [{ name: "Word Power Made Easy", total: 47 }];
   const SUBJECTS = ["qa", "dilr", "varc", "vocab"];
   const PLAN_SUBJECTS = ["qa", "dilr", "varc", "vocab"]; // all sequential, item-based topic plans
-  const PLAN_START = window.PLAN_START || "2026-06-14"; // calendar starts here; no future logging
+  const PLAN_START = window.PLAN_START || "2026-06-15"; // calendar starts here; no future logging
+  if (UI.dateKey < PLAN_START) UI.dateKey = PLAN_START; // never open on a pre-start date
   // CAT mock cadence by month
   const MOCK_PLAN = "Jul: 1 / 2 weeks · Aug: 1 / week · Sep: 2 / week · Oct-Nov: 2-3 / week";
   const MEALS = [
@@ -645,7 +646,7 @@
           <div class="statline"><span>Gym classes${w.gym.types.length ? ` (${w.gym.types.join(", ")})` : ""}</span><b>${w.gym.classes}/${w.gym.target}${w.gym.stepDays ? ` (+${w.gym.stepDays} step days)` : ""} · ${Math.round(w.gym.score)}%</b></div>
           <div class="statline"><span>Diet (days logged: ${w.diet.days})</span><b>${w.diet.score == null ? "no logs" : w.diet.score + "%"}</b></div>
           <div class="statline"><span>Wake-ups</span><b>${w.wake.yes}/${w.wake.target} · ${Math.round(w.wake.score)}%</b></div>
-          <div class="statline"><span>Office (from 14 Jun)</span><b>${w.office.attended}/${w.office.expected} · ${w.office.score == null ? "–" : Math.round(w.office.score) + "%"}</b></div>
+          <div class="statline"><span>Office (from 15 Jun)</span><b>${w.office.attended}/${w.office.expected} · ${w.office.score == null ? "–" : Math.round(w.office.score) + "%"}</b></div>
           <div class="statline"><span>Vitamins</span><b>${w.vit.done}/${w.vit.required} · ${Math.round(w.vit.score)}%</b></div>
           <h4>🏆 Weekly Wins</h4><ul class="cleanlist wins">${winLines.join("")}</ul>
           <h4>🔧 Areas to Improve</h4><ul class="cleanlist improve">${improveLines.join("")}</ul>
