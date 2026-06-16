@@ -57,6 +57,8 @@
   const SUB_META = {
     qa:    { name: "QA",    color: "var(--indigo)", soft: "var(--indigo-soft)", unit: "Qs" },
     dilr:  { name: "DILR",  color: "var(--orange)", soft: "var(--orange-soft)", unit: "Qs" },
+    lr:    { name: "LR",    color: "var(--orange)", soft: "var(--orange-soft)", unit: "Qs" },
+    di:    { name: "DI",    color: "#c98a2b",       soft: "#fbf0db",            unit: "Qs" },
     varc:  { name: "VARC",  color: "var(--pink)",   soft: "var(--pink-soft)",   unit: "exercise" },
     vocab: { name: "Vocab", color: "var(--teal)",   soft: "var(--teal-soft)",   unit: "session" },
   };
@@ -214,14 +216,18 @@
     const isDI = (x) => /^DI:/.test(x.ch.name);
     const dayIdx = Math.max(0, Math.round((parseKey(dateKey) - parseKey(PLAN_START)) / 86400000));
     const daysLeft = Math.max(1, Math.round((parseKey(AUG) - parseKey(dateKey)) / 86400000) + 1);
+    const todayLog = (x) => (S.days[dateKey]?.qa || {})[x.ch.id] || 0;
     const pick = (pool, minChunk) => {
-      const inc = pool.filter((x) => x.st.remaining > 0);
+      // include topics still open OR already logged today (so the choice is stable for tap/undo)
+      const inc = pool.filter((x) => x.st.remaining > 0 || todayLog(x) > 0);
       if (!inc.length) return null;
-      const sorted = inc.slice().sort((a, b) => b.st.remaining - a.st.remaining || (a.ch.ord ?? 0) - (b.ch.ord ?? 0));
+      // rank by remaining AS OF START OF DAY (add back today's logs) so logging never reshuffles today's pick
+      const remStart = (x) => x.st.remaining + todayLog(x);
+      const sorted = inc.slice().sort((a, b) => remStart(b) - remStart(a) || (a.ch.ord ?? 0) - (b.ch.ord ?? 0));
       const current = sorted[dayIdx % Math.min(sorted.length, 3)]; // rotate among the 3 most-remaining
       const rem = inc.reduce((a, x) => a + x.st.remaining, 0);
       const chunk = Math.max(minChunk, Math.ceil(rem / daysLeft));
-      const doneToday = (S.days[dateKey]?.qa || {})[current.ch.id] || 0;
+      const doneToday = todayLog(current);
       return { current, target: Math.min(chunk, doneToday + current.st.remaining), doneToday };
     };
     const lr = pick(items.filter((x) => !isDI(x)), 8);
@@ -289,16 +295,13 @@
     ${(() => {
       // each subject's tile shows the current topic to do today; reading is a simple 20-min tile
       const verb = { qa: (n) => `${n} questions`, varc: () => "1 exercise", vocab: () => "1 session" };
-      const tgts = PLAN_SUBJECTS.map((sub) => {
-        if (sub === "dilr") { // 1 LR set + 1 DI set, rotating topics
-          const p = dilrPlan(UI.dateKey);
-          if (!p) return { sub, missing: true, goal: 0, done: 0, label: "load plan in Study tab", note: "" };
-          if (p.done) return { sub, goal: 0, done: 0, label: "all done 🎉", note: "" };
-          const goal = (p.lr ? p.lr.target : 0) + (p.di ? p.di.target : 0);
-          const done = (p.lr ? p.lr.doneToday : 0) + (p.di ? p.di.doneToday : 0);
-          const label = p.lr && p.di ? "1 LR set + 1 DI set" : p.lr ? "1 LR set" : "1 DI set";
-          const note = [p.lr && p.lr.current.ch.name, p.di && p.di.current.ch.name].filter(Boolean).join("  +  ");
-          return { sub, goal, done, label, note };
+      const dp = dilrPlan(UI.dateKey); // LR + DI are separate tiles, both from this rotation
+      const tgts = ["qa", "lr", "di", "varc", "vocab"].map((sub) => {
+        if (sub === "lr" || sub === "di") {
+          if (!dp) return { sub, missing: true, goal: 0, done: 0, label: "load plan in Study tab", note: "" };
+          const part = dp[sub];
+          if (dp.done || !part) return { sub, goal: 0, done: 0, label: "all done 🎉", note: "" };
+          return { sub, goal: part.target, done: part.doneToday, label: `1 set (${part.target} Qs)`, note: part.current.ch.name };
         }
         const p = planFor(sub, UI.dateKey);
         if (!p) return { sub, missing: true, goal: 0, done: 0, label: "load plan in Study tab", note: "" };
@@ -849,21 +852,15 @@
       case "va": patchDay({ va: Math.max(0, (r.va || 0) + Number(arg)) }); break;
       case "tgt": {
         // each tile is a yes/no toggle for TODAY only — tap to mark done, tap again to undo. never overshoots.
-        if (arg === "dilr") {
+        if (arg === "lr" || arg === "di") {
           const p = dilrPlan(UI.dateKey);
-          if (!p || p.done) { toast("DILR all done 🎉"); break; }
+          const part = p && p[arg];
+          if (!part) { toast((arg === "lr" ? "LR" : "DI") + " all done 🎉"); break; }
+          const id = part.current.ch.id;
           const qa = { ...(r.qa || {}) };
-          const lrDone = !p.lr || (qa[p.lr.current.ch.id] || 0) >= p.lr.target;
-          const diDone = !p.di || (qa[p.di.current.ch.id] || 0) >= p.di.target;
-          if (lrDone && diDone) {
-            if (p.lr) delete qa[p.lr.current.ch.id];
-            if (p.di) delete qa[p.di.current.ch.id];
-            patchDay({ qa }); toast("DILR un-ticked for today");
-          } else {
-            if (p.lr) qa[p.lr.current.ch.id] = p.lr.target;
-            if (p.di) qa[p.di.current.ch.id] = p.di.target;
-            patchDay({ qa }); toast("DILR done ✓ — 1 LR + 1 DI set");
-          }
+          const nm = arg === "lr" ? "LR" : "DI";
+          if ((qa[id] || 0) >= part.target) { delete qa[id]; patchDay({ qa }); toast(nm + " un-ticked for today"); }
+          else { qa[id] = part.target; patchDay({ qa }); toast(`${nm} done ✓ — ${part.current.ch.name}`); }
         } else if (PLAN_SUBJECTS.includes(arg)) {
           const p = planFor(arg, UI.dateKey);
           if (!p) { toast("Load the plan in the Study tab first"); break; }
