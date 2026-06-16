@@ -56,29 +56,24 @@
   const AUG = "2026-08-31", VOCAB_END = "2026-08-03";
   const SUB_META = {
     qa:    { name: "QA",    color: "var(--indigo)", soft: "var(--indigo-soft)", unit: "Qs" },
-    dilr:  { name: "DILR",  color: "var(--orange)", soft: "var(--orange-soft)", unit: "set" },
+    dilr:  { name: "DILR",  color: "var(--orange)", soft: "var(--orange-soft)", unit: "Qs" },
     varc:  { name: "VARC",  color: "var(--pink)",   soft: "var(--pink-soft)",   unit: "exercise" },
     vocab: { name: "Vocab", color: "var(--teal)",   soft: "var(--teal-soft)",   unit: "session" },
   };
-  // DILR topics straight from the book's contents (Reasoning for CAT: LR + Verbal Reasoning, then DI).
-  // Counts are set/exercise estimates; edit any row in the Study tab.
+  // DILR — real LR question bank counts. DI topics added when counts are shared.
   const DILR_ITEMS = [
-    { name: "LR: Important Concepts", total: 3 },
-    { name: "LR: Arrangements", total: 14 },
-    { name: "LR: Rankings", total: 8 },
-    { name: "LR: Team Formations", total: 8 },
-    { name: "LR: Quantitative Reasoning", total: 8 },
-    { name: "LR: Generic Puzzles", total: 8 },
-    { name: "LR: Routes & Network Diagrams", total: 6 },
-    { name: "LR: Set Theory & Venn Diagrams", total: 8 },
-    { name: "LR: Cubes & Dice", total: 6 },
-    { name: "LR: Games & Tournaments", total: 10 },
-    { name: "VR: Syllogisms", total: 10 },
-    { name: "VR: Logical Deduction", total: 8 },
-    { name: "VR: Binary Logic", total: 6 },
-    { name: "DI: Traditional Data Interpretation", total: 16 },
-    { name: "DI: Logical Data Interpretation", total: 14 },
-    { name: "DI: Twelve-Minute Tests", total: 12 },
+    { name: "LR: Arrangements", total: 63 },
+    { name: "LR: Rankings", total: 39 },
+    { name: "LR: Team Formations", total: 26 },
+    { name: "LR: Quantitative Reasoning", total: 65 },
+    { name: "LR: Generic Puzzles", total: 62 },
+    { name: "LR: Routes & Network Diagrams", total: 43 },
+    { name: "LR: Set Theory & Venn Diagrams", total: 54 },
+    { name: "LR: Cubes & Dice", total: 29 },
+    { name: "LR: Games & Tournaments", total: 33 },
+    { name: "VR: Syllogisms", total: 100 },
+    { name: "VR: Logical Deduction", total: 30 },
+    { name: "VR: Binary Logic", total: 16 },
   ];
   // VARC topics from the books (Verbal Ability book + Reading Comprehension book), in study order.
   const VARC_ITEMS = [
@@ -152,7 +147,7 @@
   function buildPlan() {
     const plan = [];
     ARUN_QA.forEach((it, i) => { const o = QA_ORDER.indexOf(it.name); plan.push({ ...it, subject: "qa", unit: SUB_META.qa.unit, ord: o === -1 ? 100 + i : o, done: ARUN_DONE.includes(it.name) }); });
-    DILR_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "dilr", unit: SUB_META.dilr.unit, ord: i, target: JUL, done: false }));
+    DILR_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "dilr", unit: SUB_META.dilr.unit, ord: i, target: AUG, done: false }));
     VARC_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "varc", unit: SUB_META.varc.unit, ord: i, target: JUL, done: false }));
     VOCAB_ITEMS.forEach((it, i) => plan.push({ ...it, subject: "vocab", unit: SUB_META.vocab.unit, ord: i, target: VOCAB_END, done: false }));
     return plan;
@@ -200,9 +195,26 @@
     const batchRemaining = batchAll.reduce((a, x) => a + x.st.remaining, 0);
     const day0 = parseKey(dateKey), deadline = parseKey(batch);
     const daysLeft = Math.max(1, Math.round((deadline - day0) / 86400000) + 1);
-    // QA paces to its deadline; DILR/VARC/Vocab are light "1 of the current topic per day".
+    // QA paces to its deadline; VARC/Vocab are light "1 of the current topic per day".
     const dailyTarget = subject === "qa" ? Math.max(1, Math.ceil((batchRemaining + doneToday) / daysLeft)) : 1;
     return { subject, order, current, batch, batchRemaining, daysLeft, dailyTarget, doneToday };
+  }
+
+  // DILR rotation: 2 sets/day of a topic that CHANGES daily (variety), weighted to the biggest
+  // remaining topics so the whole bank still finishes by 31 Aug.
+  const SET_Q = 4; // questions per "set"
+  function dilrPlan(dateKey) {
+    const items = S.chapters.filter((c) => c.subject === "dilr").map((ch) => ({ ch, st: Score.chapterStats(ch) }));
+    if (!items.length) return null;
+    const incomplete = items.filter((x) => x.st.remaining > 0);
+    if (!incomplete.length) return { items, done: true };
+    const sorted = incomplete.slice().sort((a, b) => b.st.remaining - a.st.remaining || (a.ch.ord ?? 0) - (b.ch.ord ?? 0));
+    const dayIdx = Math.max(0, Math.round((parseKey(dateKey) - parseKey(PLAN_START)) / 86400000));
+    const K = Math.min(sorted.length, 3);            // rotate among the 3 most-remaining topics
+    const current = sorted[dayIdx % K];
+    const doneToday = (S.days[dateKey]?.qa || {})[current.ch.id] || 0;
+    const target = Math.min(2 * SET_Q, doneToday + current.st.remaining); // 2 sets, capped to finish a small topic
+    return { items, current, target, doneToday, sets: 2 };
   }
   const qaPlan = (dateKey) => planFor("qa", dateKey);
   const selDate = () => parseKey(UI.dateKey);
@@ -263,8 +275,14 @@
 
     ${(() => {
       // each subject's tile shows the current topic to do today; reading is a simple 20-min tile
-      const verb = { qa: (n) => `${n} questions`, dilr: () => "1 set", varc: () => "1 exercise", vocab: () => "1 session" };
+      const verb = { qa: (n) => `${n} questions`, varc: () => "1 exercise", vocab: () => "1 session" };
       const tgts = PLAN_SUBJECTS.map((sub) => {
+        if (sub === "dilr") { // rotating topic, 2 sets/day
+          const p = dilrPlan(UI.dateKey);
+          if (!p) return { sub, missing: true, goal: 0, done: 0, label: "load plan in Study tab", note: "" };
+          if (p.done) return { sub, goal: 0, done: 0, label: "all done 🎉", note: "" };
+          return { sub, goal: p.target, done: p.doneToday, label: `2 sets (${p.target} Qs)`, note: p.current.ch.name };
+        }
         const p = planFor(sub, UI.dateKey);
         if (!p) return { sub, missing: true, goal: 0, done: 0, label: "load plan in Study tab", note: "" };
         if (p.done) return { sub, goal: 0, done: 0, label: "all done 🎉", note: "" };
@@ -814,7 +832,14 @@
       case "va": patchDay({ va: Math.max(0, (r.va || 0) + Number(arg)) }); break;
       case "tgt": {
         // each tile is a yes/no toggle for TODAY only — tap to mark done, tap again to undo. never overshoots.
-        if (PLAN_SUBJECTS.includes(arg)) {
+        if (arg === "dilr") {
+          const p = dilrPlan(UI.dateKey);
+          if (!p || p.done) { toast("DILR all done 🎉"); break; }
+          const id = p.current.ch.id;
+          const qa = { ...(r.qa || {}) };
+          if ((qa[id] || 0) >= p.target) { delete qa[id]; patchDay({ qa }); toast("DILR un-ticked for today"); }
+          else { qa[id] = p.target; patchDay({ qa }); toast(`DILR done ✓ — 2 sets of ${p.current.ch.name}`); }
+        } else if (PLAN_SUBJECTS.includes(arg)) {
           const p = planFor(arg, UI.dateKey);
           if (!p) { toast("Load the plan in the Study tab first"); break; }
           if (p.done) { toast(SUB_META[arg].name + " all done 🎉"); break; }
@@ -914,7 +939,7 @@
           S.days = {}; S.mocks = []; S.chapters = [];
           const mk = (name, total, startDone, target, subject, ord) => S.chapters.push({ id: "ch" + Math.random().toString(36).slice(2, 8), name, total, startDone, target, subject, unit: SUB_META[subject].unit, ord });
           ARUN_QA.forEach((it, i) => { const o = QA_ORDER.indexOf(it.name); mk(it.name, it.total, ARUN_DONE.includes(it.name) ? it.total : 0, it.target, "qa", o === -1 ? 100 + i : o); });
-          DILR_ITEMS.forEach((it, i) => mk(it.name, it.total, 0, JUL, "dilr", i));
+          DILR_ITEMS.forEach((it, i) => mk(it.name, it.total, 0, AUG, "dilr", i));
           VARC_ITEMS.forEach((it, i) => mk(it.name, it.total, 0, JUL, "varc", i));
           VOCAB_ITEMS.forEach((it, i) => mk(it.name, it.total, 0, VOCAB_END, "vocab", i));
           saveState(); render(); toast("Fresh start: 4 chapters done, everything else cleared");
