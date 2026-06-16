@@ -461,25 +461,22 @@
     </div>
 
     <div class="card mt16">
-      <h3>Full Syllabus <span class="muted small">all books by 31 Aug · daily plan drives the Today tab</span></h3>
-      <p class="sub">QA chapters (Jun/Jul) and vocab sessions. DILR & VARC are tracked as daily counters on the Today tab.</p>
-      <div class="field-row">
-        <input class="input" id="chName" placeholder="Item name" style="flex:2">
-        <select class="input sm" id="chSubject" style="width:90px">${PLAN_SUBJECTS.map((s) => `<option value="${s}">${SUB_META[s].name}</option>`).join("")}</select>
-        <input class="input sm" id="chTotal" type="number" min="1" placeholder="Total">
-        <input class="input sm" id="chDone" type="number" min="0" placeholder="Done">
-        <input class="input" id="chTarget" type="date" style="width:150px">
-        <button class="btn primary" data-act="ch:add">+ Add</button>
+      <div class="row" style="border:none;padding:0;align-items:flex-start">
+        <div><h3 style="margin:0">Full Syllabus</h3><p class="sub" style="margin:2px 0 0">All books by 31 Aug. Tap a subject to see its topics.</p></div>
+        <div class="field-row" style="flex:0 0 auto">
+          <button class="btn primary" data-act="ch:seed">📚 Load plan</button>
+          <button class="btn danger" data-act="ch:fresh">🔄 Start fresh</button>
+        </div>
       </div>
-      <div class="mt8 field-row"><button class="btn primary" data-act="ch:seed">📚 Load full study plan</button>
-        <button class="btn danger" data-act="ch:fresh">🔄 Start fresh (keep only the 4 done)</button></div>
-      <div class="small muted mt8">Load = QA + DILR + VARC topics + Word Power, keeps your progress. Start fresh = wipe all logs &amp; progress, keep only Averages, Percentages, RPV and Alligations marked done (backup downloads first).</div>
       ${PLAN_SUBJECTS.map((s) => {
-        const items = S.chapters.filter((c) => (c.subject || "qa") === s).sort((a, b) => (a.ord ?? 99) - (b.ord ?? 99));
+        const items = S.chapters.filter((c) => (c.subject || "qa") === s).sort((a, b) => (a.ord ?? 99) - (b.ch?.ord ?? b.ord ?? 99));
         if (!items.length) return "";
         const m = SUB_META[s];
-        return `<div class="mt16"><h4 style="margin:0 0 4px;display:flex;align-items:center;gap:8px"><span class="dot" style="background:${m.color}"></span>${m.name} <span class="muted small">${items.length} items · ${subPct(s)}% done</span></h4>
-        <table class="tbl"><thead><tr><th>Item</th><th>Progress</th><th>%</th><th>Left</th><th>Pace/day</th><th>Target</th><th></th></tr></thead><tbody>
+        const pct = subPct(s);
+        return `<details class="subj mt12">
+          <summary><span class="subj-name"><span class="dot" style="background:${m.color}"></span> ${m.name}</span>
+            <span class="subj-prog"><span class="subj-bar">${C.bar(pct ?? 0, m.color)}</span><b>${pct}%</b><span class="muted small">${items.length} topics</span><span class="chev">▾</span></span></summary>
+          <table class="tbl mt8"><thead><tr><th>Item</th><th>Progress</th><th>%</th><th>Left</th><th>Pace/day</th><th>Target</th><th></th></tr></thead><tbody>
           ${items.map((ch) => { const st = Score.chapterStats(ch);
             return `<tr>
               <td><b>${esc(ch.name)}</b></td>
@@ -491,8 +488,20 @@
               <td><button class="iconbtn" data-act="ch:edit:${ch.id}">Edit</button><button class="iconbtn" data-act="ch:del:${ch.id}">Delete</button></td>
             </tr>`;
           }).join("")}
-        </tbody></table></div>`;
-      }).join("") || `<div class="empty">No items yet. Click "Load full study plan" above.</div>`}
+        </tbody></table></details>`;
+      }).join("") || `<div class="empty">No items yet. Click "Load plan" above.</div>`}
+      <details class="subj mt12">
+        <summary><span class="subj-name">＋ Add a custom item</span><span class="chev">▾</span></summary>
+        <div class="field-row mt8">
+          <input class="input" id="chName" placeholder="Item name" style="flex:2">
+          <select class="input sm" id="chSubject" style="width:90px">${PLAN_SUBJECTS.map((s) => `<option value="${s}">${SUB_META[s].name}</option>`).join("")}</select>
+          <input class="input sm" id="chTotal" type="number" min="1" placeholder="Total">
+          <input class="input sm" id="chDone" type="number" min="0" placeholder="Done">
+          <input class="input" id="chTarget" type="date" style="width:150px">
+          <button class="btn primary" data-act="ch:add">+ Add</button>
+        </div>
+        <div class="small muted mt8">Start fresh wipes all logs &amp; progress, keeping only Averages, Percentages, RPV and Alligations done (a backup downloads first).</div>
+      </details>
     </div>
 
     <div class="grid cols-2 mt16">
