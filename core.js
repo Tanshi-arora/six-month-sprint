@@ -218,6 +218,9 @@
     return { essays: days, pages: 0, score: clamp((days / 7) * 100) };
   }
   function varcWeek(d) { return rcWeek(d).score; }
+  function vocabWeek(d) { const s = weekSubjectSum(d, "vocab"); return { sessions: s, score: clamp((s / 7) * 100) }; }
+  // The 20% "VARC" study slice = VARC exercises + Vocab sessions + Reading, averaged, so vocab & reading count.
+  function varcBlockWeek(d) { return rnd((vaWeek(d).score + vocabWeek(d).score + readingWeek(d).score) / 3); }
 
   // Reading: minutes/day (goal 20) and current consecutive-day streak.
   function readingWeek(d) {
@@ -240,7 +243,7 @@
 
   function studyScore(d) {
     const qa = qaScore() ?? 0;
-    return rnd(qa * 0.5 + dilrWeek(d).score * 0.3 + varcWeek(d) * 0.2);
+    return rnd(qa * 0.5 + dilrWeek(d).score * 0.3 + varcBlockWeek(d) * 0.2);
   }
 
   // ---- composite scores ----------------------------------------------------
@@ -287,8 +290,12 @@
     let qaDaily = null;
     if (paceTarget > 0) qaDaily = clamp((qaToday / paceTarget) * 100);
     else if (qc.length) qaDaily = qaToday > 0 ? 100 : 0;
-    const dilrDaily = clamp(daySubjectSum(key, "dilr") * 100);  // 1 set/day of current topic
-    const varcDaily = clamp(daySubjectSum(key, "varc") * 100);  // 1 exercise/day of current topic
+    const dilrDaily = clamp(daySubjectSum(key, "dilr") * 100);  // any DILR logged today
+    // VARC slice = VARC exercise + Vocab session + Reading 20 min, each yes/no, averaged
+    const varcD = daySubjectSum(key, "varc") > 0 ? 100 : 0;
+    const vocabD = daySubjectSum(key, "vocab") > 0 ? 100 : 0;
+    const readD = (r.readMin || 0) >= 20 ? 100 : 0;
+    const varcDaily = (varcD + vocabD + readD) / 3;
     const study = qaDaily == null
       ? rnd(dilrDaily * 0.6 + varcDaily * 0.4)
       : rnd(qaDaily * 0.5 + dilrDaily * 0.3 + varcDaily * 0.2);
@@ -327,7 +334,7 @@
     wakeWeek, officeMonth, gymWeek, vitaminsWeek,
     proteinScore, calorieScore, dietDay, dietWeek,
     chapterDone, chapterStats, qaScore, qaChapters,
-    dilrWeek, rcWeek, vaWeek, aeonWeek, varcWeek, studyScore, readingWeek, readingStreak,
+    dilrWeek, rcWeek, vaWeek, aeonWeek, varcWeek, vocabWeek, varcBlockWeek, studyScore, readingWeek, readingStreak,
     daySubjectSum, weekSubjectSum, subjectTotalDone,
     categoryScores, overallScore, readinessScore, dailyActivity,
     dailyScores, overallToday,
