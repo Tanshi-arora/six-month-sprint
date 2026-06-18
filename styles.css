@@ -257,6 +257,21 @@ input, select { font: inherit; color: inherit; }
 .tgt-goal { font-size: 14px; font-weight: 700; margin-top: 8px; letter-spacing: -.01em; }
 .tgt-note { font-size: 11px; color: var(--muted); margin-top: 1px; }
 .tgt-prog { font-size: 11px; color: var(--muted); font-weight: 700; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.qa-edit { display: flex; align-items: center; gap: 5px; margin-top: 7px; font-size: 11px; color: var(--muted); font-weight: 600; cursor: default; }
+.qa-num { width: 52px; padding: 4px 6px; border: 1.5px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.85);
+  font-size: 13px; font-weight: 800; color: var(--ink); text-align: center; font-variant-numeric: tabular-nums; }
+.qa-num:focus { outline: none; border-color: var(--c); }
+
+/* category trends (dashboard) */
+.trend-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 6px; }
+@media (max-width: 1000px) { .trend-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .trend-grid { grid-template-columns: 1fr; } }
+.trend-cell { border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px 4px; background: var(--bg); }
+.trend-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 2px; }
+.trend-now { font-size: 13px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.delta { font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 99px; }
+.delta.up { color: #2f8f57; background: rgba(110,203,145,.18); }
+.delta.down { color: #c0504a; background: rgba(239,106,106,.16); }
 
 /* Daily study log grid */
 .dgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px 18px; }

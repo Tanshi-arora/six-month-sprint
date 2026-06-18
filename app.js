@@ -337,6 +337,7 @@
               <div class="tgt-goal">${t.label}</div>
               ${t.note ? `<div class="tgt-note">${esc(t.note)}</div>` : ""}
               ${na ? "" : `<div class="tgt-prog">${t.done}/${t.goal}</div>`}
+              ${na || t.sub !== "qa" ? "" : `<div class="qa-edit" data-act="qa:edit">did <input type="number" min="0" inputmode="numeric" class="qa-num" value="${t.done}" data-act="qa:set" aria-label="QA questions done today"> Qs</div>`}
             </div>`;
           }).join("")}
         </div>
@@ -558,6 +559,17 @@
     const cats = Score.categoryScores(refDate);
     const ranked = CATS.map((c) => ({ ...c, score: Math.round(cats[c.id]) })).sort((a, b) => b.score - a.score);
 
+    // week-on-week category trends (from plan start, up to last 8 weeks)
+    const tMondays = [];
+    { let mw = monday(today()); while (fmtKey(mw) >= PLAN_START && tMondays.length < 8) { tMondays.unshift(new Date(mw)); mw = addDays(mw, -7); } }
+    const tWeeks = tMondays.map((mw) => { const end = addDays(mw, 6); return { mw, ref: end > today() ? today() : end }; });
+    const catTrends = CATS.map((c) => {
+      const series = tWeeks.map((w) => ({ x: fmtShort(w.mw), y: Math.round(Score.categoryScores(w.ref)[c.id] || 0) }));
+      const last = series.length ? series[series.length - 1].y : 0;
+      const delta = series.length > 1 ? last - series[series.length - 2].y : null;
+      return { c, series, last, delta };
+    });
+
     // heatmap
     const firstDow = (parseKey(keys[0]).getDay() + 6) % 7;
     const hmCells = [...Array(firstDow).fill(null), ...keys];
@@ -597,6 +609,18 @@
             const lvl = v == null ? "future" : v >= 80 ? "l4" : v >= 55 ? "l3" : v >= 30 ? "l2" : v > 0 ? "l1" : "";
             return `<div class="hm-cell ${lvl} ${k === todayKey ? "is-today" : ""}" title="${k}${v != null ? " · " + v + "%" : ""}">${Number(k.slice(8, 10))}</div>`;
           }).join("")}
+        </div>
+      </div>
+      <div class="card span-3">
+        <h3>Category Trends</h3><p class="sub">Week-on-week score for each area, since the plan started</p>
+        <div class="trend-grid">
+          ${catTrends.map((t) => `<div class="trend-cell">
+            <div class="trend-head">
+              <span class="lbl"><span class="dot" style="background:${t.c.color}"></span> ${t.c.name}</span>
+              <span class="trend-now">${t.last}%${t.delta == null ? "" : ` <span class="delta ${t.delta >= 0 ? "up" : "down"}">${t.delta >= 0 ? "▲" : "▼"} ${Math.abs(t.delta)}</span>`}</span>
+            </div>
+            ${C.areaChart(t.series, { color: t.c.color, id: "tr_" + t.c.id, w: 320, h: 130 })}
+          </div>`).join("")}
         </div>
       </div>
     </div>`;
@@ -1045,6 +1069,20 @@
         setDay(UI.dateKey, { foods });
         render();
       }
+    }
+    if (el.matches('[data-act="qa:set"]')) {
+      // Log an EXACT number of QA questions for the day, filled across the plan in order.
+      const r = day();
+      const qa = { ...(r.qa || {}) };
+      const qaChs = S.chapters.filter((c) => (c.subject || "qa") === "qa");
+      const order = qaChs
+        .map((ch) => ({ ch, room: Score.chapterStats(ch).remaining + ((r.qa || {})[ch.id] || 0) })) // room if today were 0
+        .sort((a, b) => (a.ch.ord ?? 99) - (b.ch.ord ?? 99));
+      qaChs.forEach((c) => { delete qa[c.id]; });          // reset today's QA, then re-fill to the typed count
+      let need = Math.max(0, parseInt(el.value, 10) || 0);
+      for (const x of order) { if (need <= 0) break; const add = Math.min(need, x.room); if (add > 0) { qa[x.ch.id] = add; need -= add; } }
+      setDay(UI.dateKey, { qa }); render();
+      toast(need > 0 ? "Logged the max left in your QA plan" : "QA updated for today");
     }
     if (el.matches('[data-act="vocab:pages"]')) { setDay(UI.dateKey, { vocabPages: Math.max(0, parseInt(el.value, 10) || 0) }); render(); }
     if (el.matches('[data-act="read:min"]')) { setDay(UI.dateKey, { readMin: Math.max(0, parseInt(el.value, 10) || 0) }); render(); }
