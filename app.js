@@ -428,6 +428,7 @@
           <button class="${r.wake === true ? "on yes" : ""}" data-act="wake:yes">Woke up ✓</button>
           <button class="${r.wake === false ? "on no" : ""}" data-act="wake:no">Missed</button>
         </div>
+        <div class="row mt12"><span class="lbl">Woke up at <span class="hint">(for your record)</span></span><input class="input sm" type="time" value="${r.wakeTime || ""}" data-act="wake:time"></div>
         <div class="row mt12"><span class="hint">This week</span><b>${ww.yes}/${ww.target} days · ${Math.round(ww.score)}%</b></div>
       </div>
 
@@ -1163,6 +1164,7 @@
       if (v < PLAN_START) v = PLAN_START; // floor at 14 Jun; forward open
       UI.dateKey = v; render();
     }
+    if (el.matches('[data-act="wake:time"]')) { setDay(UI.dateKey, { wakeTime: el.value || null }); render(); }
     if (el.matches('[data-act="gym:cal"]')) setDay(UI.dateKey, { gymCal: parseInt(el.value, 10) || null });
     if (el.matches('[data-act="gym:type"]')) { setDay(UI.dateKey, { gymType: el.value || null }); render(); }
     if (el.matches('[data-act^="food:qty:"]')) {
