@@ -986,7 +986,7 @@
           if (nd >= PLAN_START) UI.dateKey = nd; // floored at 14 Jun; free to move forward
         }
         render(); break;
-      case "wake": patchDay({ wake: arg === "yes" ? (r.wake === true ? null : true) : (r.wake === false ? null : false) }); break;
+      case "wake": if (arg === "yes" || arg === "no") patchDay({ wake: arg === "yes" ? (r.wake === true ? null : true) : (r.wake === false ? null : false) }); break;
       case "office": patchDay({ office: r.office === arg ? null : arg }); break;
       case "gym":
         if (arg === "class") patchDay({ gymClass: !r.gymClass, gymType: r.gymClass ? null : r.gymType });
@@ -1165,7 +1165,7 @@
       if (v < PLAN_START) v = PLAN_START; // floor at 14 Jun; forward open
       UI.dateKey = v; render();
     }
-    if (el.matches('[data-act="wake:time"]')) { setDay(UI.dateKey, { wakeTime: el.value || null }); render(); }
+    if (el.matches('[data-act="wake:time"]')) { setDay(UI.dateKey, { wakeTime: el.value || null }); }
     if (el.matches('[data-act="gym:cal"]')) setDay(UI.dateKey, { gymCal: parseInt(el.value, 10) || null });
     if (el.matches('[data-act="gym:type"]')) { setDay(UI.dateKey, { gymType: el.value || null }); render(); }
     if (el.matches('[data-act^="food:qty:"]')) {
