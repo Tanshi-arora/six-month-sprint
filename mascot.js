@@ -144,17 +144,23 @@
     const hour = new Date().getHours();
     const v = Number(dayKey.slice(8, 10)) % 2; // alternate phrasings by date
 
+    const morning = hour < 12, evening = hour >= 18;
+
     if (!logged) {
-      if (isToday && hour < 12) return { mood: "start", head: v ? "Morning! Clean slate ☀️" : "Fresh day, fresh chances", sub: "Log your wake-up and let's get rolling. I'll be watching 👀" };
-      if (isToday && hour < 18) return { mood: "ok", head: "Nothing logged yet today", sub: "No stress. One tap on any card below gets us started." };
-      if (isToday) return { mood: "angry", head: "GRRR. Empty day?!", sub: "Me and my pink dumbbell are waiting. Log ONE thing before bed. Just one." };
-      return { mood: "sad", head: "This day went unlogged", sub: "It happens. The streak restarts the moment you log today." };
+      if (isToday && morning) return { mood: "start", head: v ? "Morning! Clean slate ☀️" : "Fresh day, fresh chances 🐰", sub: "Log your wake-up and let's get rolling." };
+      if (isToday && !evening) return { mood: "start", head: "Ready when you are", sub: "One tap on any card below and we're off." };
+      if (isToday) return { mood: "ok", head: "Still time tonight", sub: "Even one quick log keeps the momentum going 💛" };
+      return { mood: "sad", head: "This day went unlogged", sub: "It happens. Today's a fresh start 💛" };
     }
-    if (score >= 80) return { mood: "great", head: v ? `${score}% today. THUMBS UP! 🎉` : `${score}%! Absolute machine 💪`, sub: "This is exactly how CAT 2026 gets crushed. Same again tomorrow?" };
+    // Strong scores: celebrate any time of day.
+    if (score >= 80) return { mood: "great", head: v ? `${score}% today. THUMBS UP! 🎉` : `${score}%! Absolute machine 💪`, sub: "This is exactly how CAT 2026 gets crushed. Keep flying!" };
     if (score >= 60) return { mood: "happy", head: v ? `${score}% today, solid work!` : `${score}%! I'm doing a happy wiggle`, sub: "Push one more card above 80 and I break out the sparkles." };
-    if (score >= 40) return { mood: "ok", head: `${score}%. We move.`, sub: "Decent base. Pick the weakest card below and bump it before bed." };
-    if (score >= 20) return { mood: "sad", head: `${score}%... I still believe in you`, sub: "Rough days happen. One small log right now turns the day around." };
-    return { mood: "angry", head: `${score}%?! My ears went back`, sub: "Not shame, just fire. Easiest 10 points: vitamins plus a 10k-step walk." };
+    if (score >= 40) return { mood: "happy", head: `${score}% and climbing`, sub: "Great base — nudge the weakest card up when you get a sec." };
+    // Lower score: tone depends on how much day is left, never harsh in the morning.
+    if (isToday && morning) return { mood: "start", head: v ? "Yay, off to a good start! 🌱" : "We've begun — love that ☀️", sub: "Whole day ahead. Knock out a couple more cards as you go." };
+    if (isToday && !evening) return { mood: "happy", head: `${score}% so far — nice start`, sub: "Loads of day left. Pick a card and let's build on it." };
+    if (isToday) return { mood: "ok", head: `${score}% — let's add one more`, sub: "Day's winding down; one quick log before bed lifts it 💪" };
+    return { mood: "sad", head: `${score}% that day`, sub: "Some days run lighter. Today's a fresh shot 💛" };
   }
 
   window.Mascot = { svg, assess };
