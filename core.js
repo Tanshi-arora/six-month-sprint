@@ -192,8 +192,9 @@
 
   function chapterStats(ch) {
     const done = chapterDone(ch);
+    const skip = ch.skip || 0;                                  // questions deferred "for now"
     const pct = ch.total ? clamp((done / ch.total) * 100) : 0;
-    const remaining = Math.max(0, ch.total - done);
+    const remaining = Math.max(0, ch.total - done - skip);      // skipped ones drop out of the plan until restored
     let pace = null, daysLeft = null;
     if (ch.target) {
       daysLeft = Math.max(0, Math.round((parseKey(ch.target) - today()) / 86400000));
@@ -207,7 +208,7 @@
     }
     const avg = recent / 14;
     const expected = remaining === 0 ? "Done" : avg > 0 ? fmtShort(addDays(today(), Math.ceil(remaining / avg))) : null;
-    return { done, pct, remaining, pace, daysLeft, expected };
+    return { done, pct, remaining, skip, pace, daysLeft, expected };
   }
 
   // Only QA-subject chapters count toward the QA study score.

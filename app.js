@@ -588,10 +588,10 @@
               <td><b>${esc(ch.name)}</b></td>
               <td style="min-width:130px"><span class="num">${st.done}/${ch.total}</span>${C.bar(st.pct, m.color)}</td>
               <td>${pill(st.pct)}</td>
-              <td class="num">${st.remaining}</td>
+              <td class="num">${st.remaining}${st.skip ? `<div class="muted small">${st.skip} deferred</div>` : ""}</td>
               <td class="num">${st.pace == null ? "–" : st.pace + " " + (ch.unit || "Qs")}</td>
               <td class="num">${ch.target ? fmtShort(parseKey(ch.target)) : "–"}</td>
-              <td><button class="iconbtn" data-act="ch:edit:${ch.id}">Edit</button><button class="iconbtn" data-act="ch:del:${ch.id}">Delete</button></td>
+              <td><button class="iconbtn" data-act="ch:defer:${ch.id}">${ch.skip ? "Restore" : "Skip"}</button><button class="iconbtn" data-act="ch:edit:${ch.id}">Edit</button><button class="iconbtn" data-act="ch:del:${ch.id}">Delete</button></td>
             </tr>`;
           }).join("")}
         </tbody></table></details>`;
@@ -1134,6 +1134,13 @@
           if (ch && confirm(`Delete chapter "${ch.name}"? Its logged questions stay in daily history but stop counting.`)) {
             S.chapters = S.chapters.filter((c) => c.id !== arg2); saveState(); render();
           }
+        } else if (arg === "defer") {
+          const ch = S.chapters.find((c) => c.id === arg2); if (!ch) break;
+          if (ch.skip) { ch.skip = 0; saveState(); render(); toast(`${ch.name}: deferred questions restored`); break; }
+          const rem = Score.chapterStats(ch).remaining;
+          const n = parseInt(prompt(`Skip how many questions of "${ch.name}" for now? You can restore them anytime.`, String(Math.min(15, rem))) || "", 10);
+          if (!n || n < 1) break;
+          ch.skip = Math.min(n, rem); saveState(); render(); toast(`${ch.name}: ${ch.skip} skipped for later`);
         } else if (arg === "edit") {
           const ch = S.chapters.find((c) => c.id === arg2); if (!ch) break;
           const name = prompt("Chapter name:", ch.name); if (name === null) break;
