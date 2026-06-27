@@ -885,10 +885,24 @@
       UI.foodQuery = inp.value;
       const q = inp.value.replace(/^[\d.]+\s*/, "").replace(/^(half|quarter|one|two|three|four|five)\s+/i, "");
       const matches = q.length >= 2 ? FoodDB.searchFoods(q) : [];
-      box.style.display = matches.length ? "block" : "none";
-      box.innerHTML = matches.map((f, i) =>
-        `<button data-food="${i}"><span>${FoodDB.emojiFor(f.n)} ${esc(f.n)}</span><span class="macro">${f.c} kcal · ${f.p}g / ${esc(f.u)}</span></button>`).join("");
-      box.querySelectorAll("button").forEach((b, i) => b.onclick = () => addFood(matches[i]));
+      if (matches.length) {
+        box.style.display = "block";
+        box.innerHTML = matches.map((f, i) =>
+          `<button data-food="${i}"><span>${FoodDB.emojiFor(f.n)} ${esc(f.n)}</span><span class="macro">${f.c} kcal · ${f.p}g / ${esc(f.u)}</span></button>`).join("");
+        box.querySelectorAll("button").forEach((b, i) => b.onclick = () => addFood(matches[i]));
+      } else if (q.length >= 2) {
+        // Not in the DB? Offer to add it on the spot with custom macros (then it's saved for next time).
+        box.style.display = "block";
+        box.innerHTML = `<button class="add-custom"><span>➕ Add “${esc(inp.value.trim())}” yourself</span><span class="macro">enter calories & protein below</span></button>`;
+        box.querySelector("button").onclick = () => {
+          const cn = document.getElementById("customName");
+          if (cn) cn.value = inp.value.trim();
+          box.style.display = "none";
+          const cc = document.getElementById("customCal"); if (cc) cc.focus({ preventScroll: true });
+        };
+      } else {
+        box.style.display = "none";
+      }
     };
     inp.addEventListener("input", update);
     inp.addEventListener("keydown", (e) => { if (e.key === "Enter") commitFood(); });

@@ -198,6 +198,8 @@ input, select { font: inherit; color: inherit; }
 .suggest button { display: flex; justify-content: space-between; width: 100%; padding: 9px 14px; font-size: 13px; text-align: left; }
 .suggest button:hover { background: var(--indigo-soft); }
 .suggest .macro { color: var(--muted); font-size: 12px; }
+.suggest .add-custom { color: var(--indigo); font-weight: 700; }
+.suggest .add-custom .macro { color: var(--muted); font-weight: 500; }
 .food-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; font-size: 13px; border-top: 1px solid var(--line); }
 .food-item:first-child { border-top: none; }
 .food-item .nm, .food-row .nm { font-weight: 500; }

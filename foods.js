@@ -271,6 +271,17 @@ window.FOODS = [
   { n: "French fries", u: "regular", c: 320, p: 4, a: ["fries", "french fries"] },
   { n: "Banana shake", u: "glass", c: 250, p: 8, a: ["banana shake", "milkshake", "milk shake"] },
   { n: "Smoothie (fruit)", u: "glass", c: 200, p: 5, a: ["smoothie", "fruit smoothie"] },
+
+  // Shakes & cold drinks
+  { n: "Mango shake", u: "glass", c: 280, p: 7, a: ["mango shake", "mango milkshake"] },
+  { n: "Chocolate shake", u: "glass", c: 320, p: 9, a: ["chocolate shake", "choco shake", "oreo shake", "kitkat shake"] },
+  { n: "Strawberry shake", u: "glass", c: 270, p: 8, a: ["strawberry shake"] },
+  { n: "Cold coffee", u: "glass", c: 200, p: 6, a: ["cold coffee", "iced coffee", "frappe"] },
+  { n: "Mango lassi", u: "glass", c: 250, p: 6, a: ["mango lassi"] },
+  { n: "Lassi (sweet)", u: "glass", c: 220, p: 7, a: ["lassi", "sweet lassi"] },
+  { n: "Buttermilk / chaas", u: "glass", c: 40, p: 2, a: ["buttermilk", "chaas", "chhachh"] },
+  { n: "Mango (1 medium)", u: "fruit", c: 150, p: 2, a: ["mango", "aam"] },
+  { n: "Protein shake (water)", u: "glass", c: 130, p: 25, a: ["protein shake water", "whey water"] },
 ];
 
 // ---- matching & parsing ----------------------------------------------------
