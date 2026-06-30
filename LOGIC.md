@@ -155,4 +155,66 @@ The wake score depends on **when** you woke up (logged time), scaled to the 10% 
 
 ---
 
-*This document describes the logic as configured on 27 Jun 2026. If any rule changes, ask and I'll update this file.*
+## 11. 🎮 Game Mode
+
+A play layer on top of the same scores — nothing about the categories above changes.
+
+### Daily Quest
+- **Goal = match OR beat yesterday's %.** That's the whole game; the bar self-hardens as your baseline rises.
+- **50% floor:** a day must reach **50%** to bank *any* reward. Below that you can still beat yesterday, but you earn ₹0.
+- A "win" = today ≥ 50% **and** ≥ yesterday.
+
+### Reward Wallet (symbolic ₹ balance)
+The wallet is a points balance — not real money — earned automatically from your history and spent on rewards. **Balance = total earned − total redeemed**, recomputed from your logs (so it's always consistent).
+
+**Earning (only on days that clear 50%):**
+| Source | ₹ |
+|---|---|
+| Beat/match yesterday | +100/day |
+| 80%+ day | +50 |
+| 100% day (Mystery Chest) | +200 |
+| Each combo | +25 |
+| Streak milestones (3 / 5 / 10 / 20 days) | +150 / +200 / +500 / +1000 |
+| Weekly quest hit (diet/study/gym/wake) | +200 / +300 / +250 / +150 |
+| **Good month** (≥70% winning days) | **+1000** |
+
+The wallet card has a **"Where did ₹X come from?"** breakdown itemising all of the above.
+
+### Rewards — two tiers
+- **🎟️ Free perks** (unlocked just by clearing the day, no ₹, once each per win): ☕ Coffee outside · 🍰 Sweet treat · 🥟 Momos/a craving · 😴 Sleep in extra.
+- **💸 Money rewards** (spend your balance, ranked): 💆 Spa/mani-pedi/blowout ₹2000 · 🛍️ Shopping ₹1200 · 🍽️ Restaurant meal ₹600.
+- Every redemption is logged in **🎟️ Redeemed offers** with date + cost, and each has an undo ✕ (refunds).
+
+### Streaks
+Consecutive winning days. Milestones at 3/5/10/20 pay out (see table). Break a streak and it resets — the wallet stays.
+
+### Combos (auto-detected, +₹25 each)
+- 🏋️ **Fitness** = Gym + Diet (diet 80%+)
+- 📚 **Scholar** = Study + Reading (20 min)
+- 🌅 **Morning Warrior** = Wake-up + Gym
+
+### Weekly Quests
+Per week: Diet 5 days · Study 6 days · Gym 4 classes · Wake 6 mornings — each hit banks ₹ and shows a progress bar.
+
+### 🍻 Monthly Milestone
+Hit **≥70% winning days in a calendar month** → unlock a **Night Out** (claimable once/month, free) + **₹1000** banked. The 70% bar adapts to how many days the month actually has (so a part-month is fair).
+
+### 🎲 Strategic Skip
+Skip one category/day **if you compensate** — the skipped category then drops out of that day's quest scoring (weights re-balance):
+- Skip **Gym** → Diet 90+ · OR +20 QA · OR 2 DILR sets
+- Skip **Diet** → Gym class · OR 10k steps
+- Skip **Study** → Gym done AND Diet 90+
+
+### 🛟 No Zero Days
+A backup ladder per category (e.g. Gym → 10k steps → 30-min walk → 15-min stretch) so there's always an easiest available win.
+
+### Punishments (gentle, not miserable)
+- A **<40% yesterday** locks the ☕ coffee perk today.
+- **Defaulting too long** (a run of empty/<40% days) **drains the wallet**, escalating each day, and at **3+ days FREEZES all redemptions**. Log one **50%+ day** and it thaws and the balance is restored. Only the *current* slump bites — old gaps you recovered from don't.
+
+### Level
+A cosmetic level grows with lifetime earnings (every ₹1000 ≈ +1 level).
+
+---
+
+*This document describes the logic as configured on 30 Jun 2026, including Game Mode. If any rule changes, ask and I'll update this file.*
