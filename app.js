@@ -348,6 +348,9 @@
     const calT = S.settings.calTarget, proT = S.settings.proteinTarget;
     const todaysQA = Object.entries(r.qa || {}).filter(([, n]) => n > 0);
     const bun = Mascot.assess(UI.dateKey);
+    const gk = fmtKey(today());
+    const gBeat = Game.goodDay(gk), gY = Game.questScore(fmtKey(addDays(today(), -1))), gT = Game.questScore(gk);
+    const gBal = Game.balance(), gStreak = Game.currentStreak();
 
     return `
     <div class="card mascot-card">
@@ -356,6 +359,13 @@
         <div class="bubble-head">${bun.head}</div>
         <div class="small muted">${bun.sub}</div>
       </div>
+    </div>
+
+    <div class="quest-strip" data-tab="game" role="button" tabindex="0">
+      <span class="qs-item">🎯 ${gBeat ? "Beat yesterday ✓" : `Beat ${gY}% · now ${gT}%`}</span>
+      <span class="qs-item">💰 ₹${gBal}</span>
+      <span class="qs-item">🔥 ${gStreak}</span>
+      <span class="qs-go">Game →</span>
     </div>
 
     <div class="datenav">
@@ -634,6 +644,79 @@
     </div>`;
   }
 
+  // ----------------------------------------------------------------- GAME ---
+  function renderGame() {
+    const cap = (s) => s[0].toUpperCase() + s.slice(1);
+    const k = fmtKey(today());
+    const yk = fmtKey(addDays(today(), -1));
+    const tScore = Game.questScore(k), yScore = Game.questScore(yk);
+    const beat = Game.goodDay(k);
+    const streak = Game.currentStreak();
+    const bal = Game.balance(), lvl = Game.level();
+    const combos = Game.combosFor(k);
+    const reward = Game.dailyReward(k);
+    const pun = Game.punishment();
+    const wp = Game.weeklyProgress(today());
+    const sk = Game.skipState(k);
+
+    return `
+    ${pun.recovery ? `<div class="card span-3 tint-pink"><h3>🩹 Recovery Quest</h3><p class="sub">${pun.note}</p></div>` : ""}
+    <div class="grid cols-3">
+      <div class="card span-3 tint-indigo">
+        <h3>🎯 Daily Quest <span class="muted small">Level ${lvl} · 🔥 ${streak}-day streak</span></h3>
+        <p class="sub">Beat — or match — yesterday. That's the whole game.</p>
+        <div class="quest-row">
+          <div class="q-box"><span class="q-num">${yScore}%</span><span class="q-lbl">yesterday</span></div>
+          <div class="q-arrow ${beat ? "win" : ""}">${beat ? "✓" : "→"}</div>
+          <div class="q-box"><span class="q-num ${beat ? "win" : ""}">${tScore}%</span><span class="q-lbl">today</span></div>
+        </div>
+        <div class="quest-status ${beat ? "win" : ""}">${beat ? `Quest cleared! ${reward ? reward.emoji + " " + reward.text : "+₹" + Game.EARN.daily}` : `${tScore > 0 ? "Keep going" : "Log something"} — match or pass ${yScore}% to clear today`}</div>
+      </div>
+
+      <div class="card span-2">
+        <h3>💰 Reward Wallet <span class="muted small">balance you've banked</span></h3>
+        <div class="wallet-bal">₹${bal}</div>
+        <p class="sub">Win days to bank more, then unlock a treat. ${pun.coffeeLocked ? `<b style="color:var(--orange)">☕ Coffee locked today</b>` : ""}</p>
+        <div class="reward-grid">
+          ${Game.REWARDS.map((rw) => {
+            const can = Game.canClaim(rw);
+            return `<button class="reward ${can ? "" : "locked"}" ${can ? `data-act="claim:${rw.id}"` : "disabled"} title="${can ? "tap to unlock" : "not enough / locked"}">
+              <span class="r-emoji">${rw.emoji}</span><span class="r-name">${rw.name}</span><span class="r-cost">₹${rw.cost}</span></button>`;
+          }).join("")}
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>⚡ Today's Combos</h3>
+        ${combos.length ? combos.map((c) => `<div class="combo-row">${c.emoji} ${c.name} <b>+₹${Game.EARN.combo}</b></div>`).join("") : `<p class="sub">No combos yet. Pair Gym+Diet, Study+Reading, or Wake+Gym for a bonus.</p>`}
+      </div>
+
+      <div class="card span-2">
+        <h3>🗓️ Weekly Quests</h3>
+        ${Object.entries(wp).map(([key, w]) => { const done = w.have >= w.need; return `
+          <div class="wq-row"><span class="wq-name">${cap(key)} <span class="muted small">${w.label}</span></span>
+            <span class="wq-prog ${done ? "win" : ""}">${w.have}/${w.need}${done ? ` ✓ +₹${w.reward}` : ""}</span></div>
+          ${C.bar(Math.min(100, (w.have / w.need) * 100), done ? "var(--green)" : "var(--indigo)")}`; }).join("")}
+      </div>
+
+      <div class="card">
+        <h3>🎲 Strategic Skip</h3>
+        <p class="sub">Skip one category today — if you compensate.</p>
+        ${["study", "gym", "diet"].map((cat) => `<div class="skip-row">
+          <button class="skip-btn ${sk.cat === cat ? "on" : ""}" data-act="skip:${cat}">${sk.cat === cat ? "Skipping " + cap(cat) : "Skip " + cap(cat)}</button>
+          <span class="muted small">${Game.SKIP_RULES[cat].needs}</span></div>`).join("")}
+        ${sk.cat ? `<div class="skip-status ${sk.met ? "win" : "fail"}">${sk.met ? `✓ Compensation met — ${cap(sk.cat)} skip is safe` : `✗ Compensate first: ${sk.needs}`}</div>` : ""}
+      </div>
+
+      <div class="card span-3">
+        <h3>🛟 No Zero Days</h3><p class="sub">Whatever the day throws at you, do the easiest still-available step — you always earn something.</p>
+        <div class="ladder-grid">
+          ${Object.entries(Game.LADDERS).map(([catn, steps]) => `<div class="ladder"><div class="l-head">${catn}</div>${steps.map((s, i) => `<div class="l-step">${i ? "↓ " : ""}${s}</div>`).join("")}</div>`).join("")}
+        </div>
+      </div>
+    </div>`;
+  }
+
   // ------------------------------------------------------------ DASHBOARD ---
   function renderDashboard() {
     const base = new Date(today().getFullYear(), today().getMonth() - UI.monthOffset, 1);
@@ -877,6 +960,7 @@
     document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === UI.tab));
     view.innerHTML = UI.tab === "today" ? renderToday()
       : UI.tab === "study" ? renderStudy()
+      : UI.tab === "game" ? renderGame()
       : UI.tab === "dashboard" ? renderDashboard()
       : renderReports();
     if (UI.tab === "today") wireFoodInput();
@@ -1075,6 +1159,23 @@
         if (dir === "up" && completed && STUDY_TGT.has(sub)) celebrate();
         break;
       }
+      case "skip": {
+        const tk = fmtKey(today());
+        const cur = (getDay(tk, false).skipCat) || null;
+        setDay(tk, { skipCat: cur === arg ? null : arg });   // toggle today's strategic skip
+        render();
+        break;
+      }
+      case "claim": {
+        const rw = Game.REWARDS.find((x) => x.id === arg);
+        if (!rw) break;
+        if (!Game.canClaim(rw)) { toast(Game.coffeeLocked() && rw.id === "coffee" ? "☕ Locked today" : "Not enough balance yet"); break; }
+        S.game = S.game || { claims: [] };
+        S.game.claims = S.game.claims || [];
+        S.game.claims.push({ date: fmtKey(today()), id: rw.id, name: rw.name, cost: rw.cost });
+        saveState(); render(); celebrate(); toast(`${rw.emoji} ${rw.name} unlocked — enjoy!`);
+        break;
+      }
       case "mock":
         if (arg === "add") {
           const name = (document.getElementById("mkName").value || "").trim();
@@ -1267,6 +1368,7 @@
     } else sessionStorage.setItem("t6-restore-declined", "1");
   })();
 
+  S.game = S.game || { claims: [] };   // Game Mode: reward-wallet claims log
   // One-time ease: collapse the old June/July QA crunch into a single even 31-Aug pace.
   (function easeQADeadlines() {
     let changed = false;
