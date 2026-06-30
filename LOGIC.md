@@ -164,8 +164,8 @@ A play layer on top of the same scores — nothing about the categories above ch
 - **50% floor:** a day must reach **50%** to bank *any* reward. Below that you can still beat yesterday, but you earn ₹0.
 - A "win" = today ≥ 50% **and** ≥ yesterday.
 
-### Reward Wallet (symbolic ₹ balance)
-The wallet is a points balance — not real money — earned automatically from your history and spent on rewards. **Balance = total earned − total redeemed**, recomputed from your logs (so it's always consistent).
+### Reward Wallet (credit ledger)
+The wallet is a **credit balance** — not real money — banked automatically from your history and spent freely. **Balance = total earned − total spent**, recomputed from your logs. **The balance can go negative** ("in the red — earn it back"); spending is never blocked by a low balance (only by a deep-slump freeze, below).
 
 **Earning (only on days that clear 50%):**
 | Source | ₹ |
@@ -178,12 +178,11 @@ The wallet is a points balance — not real money — earned automatically from 
 | Weekly quest hit (diet/study/gym/wake) | +200 / +300 / +250 / +150 |
 | **Good month** (≥70% winning days) | **+1000** |
 
-The wallet card has a **"Where did ₹X come from?"** breakdown itemising all of the above.
-
-### Rewards — two tiers
-- **🎟️ Free perks** (unlocked just by clearing the day, no ₹, once each per win): ☕ Coffee outside · 🍰 Sweet treat · 🥟 Momos/a craving · 😴 Sleep in extra.
-- **💸 Money rewards** (spend your balance, ranked): 💆 Spa/mani-pedi/blowout ₹2000 · 🛍️ Shopping ₹1200 · 🍽️ Restaurant meal ₹600.
-- Every redemption is logged in **🎟️ Redeemed offers** with date + cost, and each has an undo ✕ (refunds).
+### Spending — two kinds
+- **🎟️ Free perks** (unlocked just by clearing the day, no credits, once each per win): ☕ Coffee outside · 🍰 Sweet treat · 🥟 Momos/a craving · 😴 Sleep in extra.
+- **💸 Credit spending** (free-form): enter the **actual ₹ amount** of any treat + what it was for (quick chips: Shopping · Restaurant · Spa · Outing · Other). It debits your credits by that exact amount — e.g. ₹2000 shopping → −₹2000 — and the balance can dip negative.
+- Every spend/perk is logged in **🎟️ Redeemed offers** with date + amount, each with an undo ✕ (refunds).
+- The wallet has a **dated Statement** ("₹X earned, ₹Y spent") that itemises every reward with its date and reason (e.g. "Beat/matched yesterday — 58% · 30 Jun · +₹100").
 
 ### Streaks
 Consecutive winning days. Milestones at 3/5/10/20 pay out (see table). Break a streak and it resets — the wallet stays.
