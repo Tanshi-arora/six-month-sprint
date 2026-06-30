@@ -164,8 +164,11 @@ A play layer on top of the same scores — nothing about the categories above ch
 - **No 50% cliff** — every band earns: below 30% nothing · 30–49% half · 50%+ full · 80%+ bonus · 100% Mystery Chest.
 
 ### Fun Fund (one credit currency)
-- A single credit **balance = total earned − total spent**, recomputed from your logs. **It can go negative** ("in the red — earn it back"); spending is never blocked.
+- A single credit **balance = total earned − total spent**. **Credits only count from the day Game Mode starts** (not retroactively from your whole history), so there's never a phantom balance.
+- **It can go negative** ("in the red — earn it back"); spending is never blocked.
 - **"Available now"** shows what your balance can afford (e.g. ☕×6).
+- **↺ Start fresh** (in the card) re-zeroes the balance and banks forward from today; your logged data is untouched.
+- **Level** rises with lifetime credits earned (~every ₹1,000 = +1).
 
 **Earning (scaled by today's band — ×0.5 in the 30–49% band):**
 | Source | ₹ |
@@ -197,7 +200,7 @@ A different bonus each day (deterministic): **Coffee costs half** · **Reading p
 - Combos (auto, +₹25 each): 🏋️ Fitness (Gym+Diet) · 📚 Scholar (Study+Reading) · 🌅 Morning Warrior (Wake+Gym) · 🧠 Brain Day (QA+DILR+Reading) · 🥗 Clean Day (Calories+Protein) · ⚡ Productivity (Wake+Study).
 
 ### 🏅 Monthly Tiers
-By % of winning days in the month: **Bronze 50% · Silver 65% · Gold 80% · Diamond 95%** — each banks an escalating bonus, and **Gold+ unlocks a 🍻 Night Out**. The bar adapts to the month's length.
+By % of winning days in the month: **Bronze 50% · Silver 65% · Gold 80% · Diamond 95%** — each banks an escalating bonus (₹300 / ₹600 / ₹1,200 / ₹2,000), and **Gold+ unlocks a 🍻 Night Out**. Needs at least 10 tracked days in the month before a tier is awarded.
 
 ### 🎲 Strategic Skip (smart)
 Skip one category/day **if you compensate** (it then drops out of the day's scoring): Skip Gym → Diet 90+ / +20 QA / 2 DILR sets · Skip Diet → Gym/10k steps · Skip Study → Gym + Diet 90+. **Bun recommends** the safest skip based on what's already strong.
@@ -208,16 +211,4 @@ Skip one category/day **if you compensate** (it then drops out of the day's scor
 
 ---
 
-## 12. ✨ Identity XP (separate progression)
-
-A self-directed system for **becoming who you want to be** — completely separate from the daily score and credits, **never required**, pure bonus. XP drives your **Level** only (100 XP per level).
-
-Tap to log (each can be done repeatedly): **💼 Career** (Apply +20 · Resume +30 · Interview +75 · New skill +40), **💪 Health** (Healthy meal +20 · 3L water +10 · No sugar +20 · Yoga +20), **🏡 Life** (Clean room +20 · Laundry +15 · Groceries +15 · Meal prep +20 · Declutter +20), **✨ Self Care** (Skincare +10 · Hair +15 · Grooming +15), **🤝 Relationships** (Call parents +15 · Family time +25 · Met a friend +20), **🧠 Adulting** (Budget +20 · Appointment +15 · Errand +20 · Documents +20).
-
-**Cosmetic unlocks** by level: 💍 Gold Ring (L5) · 🐰 New Bunny (L10) · 🎉 Confetti+ (L15) · 👑 Crown (L25).
-
-**🏆 Hidden achievements** unlock automatically (shown as 🔒 ??? until earned): First Application · Resume Master · Job Hunter · 🐦‍🔥 Phoenix (recovered from a slump) · Iron Soul (50 gym classes) · Quant Beast (1000 QA) · Unstoppable (30 winning days) · Perfect Week (7-day streak) · Big Saver (₹10k earned) · CAT Ready (readiness 80%+) · 👑 Level 25 · Glow Up · Certified Adult · 💎 Diamond Month.
-
----
-
-*This document describes the logic as configured on 30 Jun 2026, including Game Mode v2 and Identity XP. If any rule changes, ask and I'll update this file.*
+*This document describes the logic as configured on 30 Jun 2026, including Game Mode v2 (one credit currency, momentum, tiers, coach, buffs, recovery). If any rule changes, ask and I'll update this file.*
