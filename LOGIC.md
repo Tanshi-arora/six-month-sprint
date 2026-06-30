@@ -159,61 +159,65 @@ The wake score depends on **when** you woke up (logged time), scaled to the 10% 
 
 A play layer on top of the same scores — nothing about the categories above changes.
 
-### Daily Quest
-- **Goal = match OR beat yesterday's %.** That's the whole game; the bar self-hardens as your baseline rises.
-- **50% floor:** a day must reach **50%** to bank *any* reward. Below that you can still beat yesterday, but you earn ₹0.
-- A "win" = today ≥ 50% **and** ≥ yesterday.
+### Daily Quest — momentum
+- The goal is to **improve on yesterday**, not hit 100%. The bigger the jump, the bigger the reward.
+- **No 50% cliff** — every band earns: below 30% nothing · 30–49% half · 50%+ full · 80%+ bonus · 100% Mystery Chest.
 
-### Reward Wallet (credit ledger)
-The wallet is a **credit balance** — not real money — banked automatically from your history and spent freely. **Balance = total earned − total spent**, recomputed from your logs. **The balance can go negative** ("in the red — earn it back"); spending is never blocked by a low balance (only by a deep-slump freeze, below).
+### Fun Fund (one credit currency)
+- A single credit **balance = total earned − total spent**, recomputed from your logs. **It can go negative** ("in the red — earn it back"); spending is never blocked.
+- **"Available now"** shows what your balance can afford (e.g. ☕×6).
 
-**Earning (only on days that clear 50%):**
+**Earning (scaled by today's band — ×0.5 in the 30–49% band):**
 | Source | ₹ |
 |---|---|
-| Beat/match yesterday | +100/day |
-| 80%+ day | +50 |
-| 100% day (Mystery Chest) | +200 |
+| Improved +5% / +10% / +20% over yesterday | +50 / +100 / +200 |
+| Small gain, or held a solid 50%+ | +25 |
+| 80%+ day | +50 · 100% day | +200 |
 | Each combo | +25 |
 | Streak milestones (3 / 5 / 10 / 20 days) | +150 / +200 / +500 / +1000 |
 | Weekly quest hit (diet/study/gym/wake) | +200 / +300 / +250 / +150 |
-| **Good month** (≥70% winning days) | **+1000** |
+| Monthly tier (Bronze/Silver/Gold/Diamond) | +300 / +600 / +1200 / +2000 |
 
-### Spending — two kinds
-- **🎟️ Free perks** (unlocked just by clearing the day, no credits, once each per win): ☕ Coffee outside · 🍰 Sweet treat · 🥟 Momos/a craving · 😴 Sleep in extra.
-- **💸 Credit spending** (free-form): enter the **actual ₹ amount** of any treat + what it was for (quick chips: Shopping · Restaurant · Spa · Outing · Other). It debits your credits by that exact amount — e.g. ₹2000 shopping → −₹2000 — and the balance can dip negative.
-- Every spend/perk is logged in **🎟️ Redeemed offers** with date + amount, each with an undo ✕ (refunds).
-- The wallet has a **dated Statement** ("₹X earned, ₹Y spent") that itemises every reward with its date and reason (e.g. "Beat/matched yesterday — 58% · 30 Jun · +₹100").
+### Spending
+- **Quick treats** (fixed price): ☕ Coffee ₹100 · 🍰 Sweet Treat ₹150 · 🥟 Momos ₹250 · 🍔 Meal ₹500.
+- **Spend an exact amount** (free-form): type the real ₹ of any treat + what for (Shopping/Salon/Trip/Other). Debits that exact amount.
+- Everything is logged with date + amount (undo ✕ refunds). The **Statement** is a dated bank statement of every earning **and** spend.
 
-### Streaks
-Consecutive winning days. Milestones at 3/5/10/20 pay out (see table). Break a streak and it resets — the wallet stays.
+### 🐰 Bun the coach
+Shows the **shortest path** to securing today's win (e.g. "25 more points → today's win · Quickest path: a 20-min read"), or "win secured" once you're there.
 
-### Combos (auto-detected, +₹25 each)
-- 🏋️ **Fitness** = Gym + Diet (diet 80%+)
-- 📚 **Scholar** = Study + Reading (20 min)
-- 🌅 **Morning Warrior** = Wake-up + Gym
+### ⏰ Near-Miss Save
+After **8 PM**, if you're close to a win (within ~18 points), Bun offers one quick action (reading / 10k steps / wake-up / vitamins) to save the day.
 
-### Weekly Quests
-Per week: Diet 5 days · Study 6 days · Gym 4 classes · Wake 6 mornings — each hit banks ₹ and shows a progress bar.
+### 🍀 Daily Buff
+A different bonus each day (deterministic): **Coffee costs half** · **Reading pays +₹100** · **Combos pay double** · **+₹50 if you win**.
 
-### 🍻 Monthly Milestone
-Hit **≥70% winning days in a calendar month** → unlock a **Night Out** (claimable once/month, free) + **₹1000** banked. The 70% bar adapts to how many days the month actually has (so a part-month is fair).
+### Streaks & Combos
+- Streak = consecutive winning days; milestones at 3/5/10/20 pay out.
+- Combos (auto, +₹25 each): 🏋️ Fitness (Gym+Diet) · 📚 Scholar (Study+Reading) · 🌅 Morning Warrior (Wake+Gym) · 🧠 Brain Day (QA+DILR+Reading) · 🥗 Clean Day (Calories+Protein) · ⚡ Productivity (Wake+Study).
 
-### 🎲 Strategic Skip
-Skip one category/day **if you compensate** — the skipped category then drops out of that day's quest scoring (weights re-balance):
-- Skip **Gym** → Diet 90+ · OR +20 QA · OR 2 DILR sets
-- Skip **Diet** → Gym class · OR 10k steps
-- Skip **Study** → Gym done AND Diet 90+
+### 🏅 Monthly Tiers
+By % of winning days in the month: **Bronze 50% · Silver 65% · Gold 80% · Diamond 95%** — each banks an escalating bonus, and **Gold+ unlocks a 🍻 Night Out**. The bar adapts to the month's length.
 
-### 🛟 No Zero Days
-A backup ladder per category (e.g. Gym → 10k steps → 30-min walk → 15-min stretch) so there's always an easiest available win.
+### 🎲 Strategic Skip (smart)
+Skip one category/day **if you compensate** (it then drops out of the day's scoring): Skip Gym → Diet 90+ / +20 QA / 2 DILR sets · Skip Diet → Gym/10k steps · Skip Study → Gym + Diet 90+. **Bun recommends** the safest skip based on what's already strong.
 
-### Punishments (gentle, not miserable)
-- A **<40% yesterday** locks the ☕ coffee perk today.
-- **Defaulting too long** (a run of empty/<40% days) **drains the wallet**, escalating each day, and at **3+ days FREEZES all redemptions**. Log one **50%+ day** and it thaws and the balance is restored. Only the *current* slump bites — old gaps you recovered from don't.
-
-### Level
-A cosmetic level grows with lifetime earnings (every ₹1000 ≈ +1 level).
+### 🛟 No Zero Days & 🩹 Recovery Mode
+- A backup ladder per category so there's always an easy win (Gym → 10k steps → walk → stretch).
+- After a 3+ day slump there's **no freeze or penalty** — instead it's a **Recovery Day**: today's win bar drops to **40%**. Clear that and you're back.
 
 ---
 
-*This document describes the logic as configured on 30 Jun 2026, including Game Mode. If any rule changes, ask and I'll update this file.*
+## 12. ✨ Identity XP (separate progression)
+
+A self-directed system for **becoming who you want to be** — completely separate from the daily score and credits, **never required**, pure bonus. XP drives your **Level** only (100 XP per level).
+
+Tap to log (each can be done repeatedly): **💼 Career** (Apply +20 · Resume +30 · Interview +75 · New skill +40), **💪 Health** (Healthy meal +20 · 3L water +10 · No sugar +20 · Yoga +20), **🏡 Life** (Clean room +20 · Laundry +15 · Groceries +15 · Meal prep +20 · Declutter +20), **✨ Self Care** (Skincare +10 · Hair +15 · Grooming +15), **🤝 Relationships** (Call parents +15 · Family time +25 · Met a friend +20), **🧠 Adulting** (Budget +20 · Appointment +15 · Errand +20 · Documents +20).
+
+**Cosmetic unlocks** by level: 💍 Gold Ring (L5) · 🐰 New Bunny (L10) · 🎉 Confetti+ (L15) · 👑 Crown (L25).
+
+**🏆 Hidden achievements** unlock automatically (shown as 🔒 ??? until earned): First Application · Resume Master · Job Hunter · 🐦‍🔥 Phoenix (recovered from a slump) · Iron Soul (50 gym classes) · Quant Beast (1000 QA) · Unstoppable (30 winning days) · Perfect Week (7-day streak) · Big Saver (₹10k earned) · CAT Ready (readiness 80%+) · 👑 Level 25 · Glow Up · Certified Adult · 💎 Diamond Month.
+
+---
+
+*This document describes the logic as configured on 30 Jun 2026, including Game Mode v2 and Identity XP. If any rule changes, ask and I'll update this file.*
