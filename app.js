@@ -362,8 +362,8 @@
     </div>
 
     <div class="quest-strip" data-tab="game" role="button" tabindex="0">
-      <span class="qs-item">🎯 ${gBeat ? "Beat yesterday ✓" : `Beat ${gY}% · now ${gT}%`}</span>
-      <span class="qs-item">💰 ₹${gBal}</span>
+      <span class="qs-item">🎯 ${gBeat ? "Quest won ✓" : `${gT}% · improve on ${gY}%`}</span>
+      <span class="qs-item">💰 ${gBal < 0 ? "−₹" + Math.abs(gBal) : "₹" + gBal}</span>
       <span class="qs-item">🔥 ${gStreak}</span>
       <span class="qs-go">Game →</span>
     </div>
@@ -647,13 +647,12 @@
   // ----------------------------------------------------------------- GAME ---
   function renderGame() {
     const cap = (s) => s[0].toUpperCase() + s.slice(1);
-    const rewardEmoji = (id) => id === "nightout" ? "🍻" : id === "spend" ? "💸" : (Game.REWARDS.concat(Game.PERKS).find((r) => r.id === id) || {}).emoji || "🎟️";
+    const rewardEmoji = (id) => id === "nightout" ? "🍻" : id === "spend" ? "💸" : (Game.REWARDS.find((r) => r.id === id) || {}).emoji || "🎟️";
     const rs = (n) => (n < 0 ? "−₹" + Math.abs(n) : "₹" + n);
     const k = fmtKey(today());
     const yk = fmtKey(addDays(today(), -1));
-    const tScore = Game.questScore(k), yScore = Game.questScore(yk);
-    const beat = Game.goodDay(k);
-    const beatY = Game.beatYesterday(k);
+    const tScore = Game.questScore(k), yScore = Game.questScore(yk), delta = tScore - yScore;
+    const win = Game.dayEarn(k) > 0;
     const streak = Game.currentStreak();
     const bal = Game.balance(), lvl = Game.level();
     const combos = Game.combosFor(k);
@@ -661,23 +660,23 @@
     const pun = Game.punishment();
     const wp = Game.weeklyProgress(today());
     const sk = Game.skipState(k);
-    const bd = Game.earnBreakdown();
+    const earned = Game.earnedTotal(), spent = Game.spentTotal();
     const log = Game.earnLog();
     const claims = (((S.game && S.game.claims) || []).slice().reverse());
-    const mg = Game.monthGood(today()), nightOut = Game.canNightOut(), nightDone = Game.claimedThisMonth("nightout");
+    const mg = Game.monthGood(today()), nightDone = Game.claimedThisMonth("nightout");
 
     return `
     ${pun.recovery ? `<div class="card span-3 tint-pink"><h3>🩹 Recovery Quest</h3><p class="sub">${pun.note}</p></div>` : ""}
     <div class="grid cols-3">
       <div class="card span-3 tint-indigo">
         <h3>🎯 Daily Quest <span class="muted small">Level ${lvl} · 🔥 ${streak}-day streak</span></h3>
-        <p class="sub">Beat — or match — yesterday. That's the whole game.</p>
+        <p class="sub">Improve on yesterday — even a little. The bigger the jump, the bigger the reward.</p>
         <div class="quest-row">
           <div class="q-box"><span class="q-num">${yScore}%</span><span class="q-lbl">yesterday</span></div>
-          <div class="q-arrow ${beat ? "win" : ""}">${beat ? "✓" : "→"}</div>
-          <div class="q-box"><span class="q-num ${beat ? "win" : ""}">${tScore}%</span><span class="q-lbl">today</span></div>
+          <div class="q-arrow ${win ? "win" : ""}">${delta > 0 ? "↑" + delta : delta < 0 ? "↓" + Math.abs(delta) : "="}</div>
+          <div class="q-box"><span class="q-num ${win ? "win" : ""}">${tScore}%</span><span class="q-lbl">today</span></div>
         </div>
-        <div class="quest-status ${beat ? "win" : ""}">${beat ? `Quest cleared! ${reward ? reward.emoji + " " + reward.text : "+₹" + Game.EARN.daily}` : beatY ? `Beat yesterday 👏 — now reach <b>${Game.MIN_PCT}%</b> to bank the reward (at ${tScore}%)` : `${tScore > 0 ? "Keep going" : "Log something"} — match ${yScore}% and clear <b>${Game.MIN_PCT}%</b> to win`}</div>
+        <div class="quest-status ${win ? "win" : ""}">${win ? `${reward ? reward.emoji + " " + reward.text : "Banked credits today"}` : tScore < Game.FLOOR ? `Reach <b>${Game.FLOOR}%</b> to start earning (you're at ${tScore}%)` : `At ${tScore}% — log a bit more to bank credits`}</div>
       </div>
 
       <div class="card span-3 ${mg.earned ? "tint-green" : "tint-pink"}">
@@ -690,31 +689,31 @@
       </div>
 
       <div class="card span-2">
-        <h3>💰 Reward Wallet <span class="muted small">balance you've banked</span></h3>
+        <h3>💰 Reward Wallet <span class="muted small">one balance for everything</span></h3>
         <div class="wallet-bal ${bal < 0 ? "neg" : ""}">${rs(bal)}</div>
-        <p class="sub">Clear the day (${Game.MIN_PCT}%+ & ≥ yesterday) to unlock free treats; bank ₹ for the big ones. ${pun.redeemLocked ? `<b style="color:var(--red)">🔒 Redemptions frozen — log a ${Game.MIN_PCT}%+ day to thaw</b>` : pun.coffeeLocked ? `<b style="color:var(--orange)">☕ Coffee perk locked today</b>` : ""}</p>
-        <div class="reward-subhead">🎟️ Free when you clear today's quest</div>
+        <p class="sub">Bank credits by winning days; treats cost credits. ${bal < 0 ? `<b style="color:var(--red)">₹${Math.abs(bal)} in the red — earn it back!</b>` : ""} ${pun.redeemLocked ? `<b style="color:var(--red)">🔒 Spending frozen — log a winning day to thaw</b>` : ""}</p>
+        <div class="reward-subhead">⚡ Quick treats</div>
         <div class="reward-grid">
-          ${Game.PERKS.map((p) => {
-            const can = Game.canPerk(p), used = Game.claimedToday(p.id);
-            return `<button class="reward perk ${can ? "" : "locked"}" ${can ? `data-act="perk:${p.id}"` : "disabled"} title="${used ? "enjoyed today ✓" : can ? "tap to treat yourself" : "win today to unlock"}">
-              <span class="r-emoji">${p.emoji}</span><span class="r-name">${p.name}</span><span class="r-cost">${used ? "✓ today" : "free"}</span></button>`;
+          ${Game.REWARDS.map((rw) => {
+            const can = Game.canSpend();
+            return `<button class="reward ${can ? "" : "locked"}" ${can ? `data-act="buy:${rw.id}"` : "disabled"} title="${can ? "tap to spend ₹" + rw.cost : "frozen"}">
+              <span class="r-emoji">${rw.emoji}</span><span class="r-name">${rw.name}</span><span class="r-cost">₹${rw.cost}</span></button>`;
           }).join("")}
         </div>
-        <div class="reward-subhead">💸 Spend your credits ${bal < 0 ? `<span style="color:var(--red)">(₹${Math.abs(bal)} in the red — earn it back!)</span>` : "(negative is fine)"}</div>
+        <div class="reward-subhead">💸 Spend an exact amount</div>
         <div class="spend-row ${Game.canSpend() ? "" : "locked"}">
           <span class="spend-rs">₹</span>
           <input type="number" min="1" inputmode="numeric" class="tgt-num spend-amt" id="spendAmt" placeholder="amount" ${Game.canSpend() ? "" : "disabled"}>
-          <input class="input spend-what" id="spendWhat" placeholder="on what? (shopping, dinner…)" ${Game.canSpend() ? "" : "disabled"}>
+          <input class="input spend-what" id="spendWhat" placeholder="on what? (shopping, salon…)" ${Game.canSpend() ? "" : "disabled"}>
           <button class="btn primary" data-act="spend" ${Game.canSpend() ? "" : "disabled"}>Spend</button>
         </div>
         <div class="spend-chips">
-          ${[["🛍️", "Shopping"], ["🍽️", "Restaurant"], ["💆", "Spa / self-care"], ["🍿", "Outing"], ["✨", "Other"]].map(([e, n]) => `<button class="chip-spend" data-act="spendfill:${encodeURIComponent(n)}">${e} ${n}</button>`).join("")}
+          ${Game.SPEND_CATS.map((c) => `<button class="chip-spend" data-act="spendfill:${encodeURIComponent(c.name)}">${c.emoji} ${c.name}</button>`).join("")}
         </div>
-        <details class="wallet-info"><summary>Statement — ₹${bd.total} earned, ${rs(Game.spentTotal() * -1)} spent</summary>
+        <details class="wallet-info"><summary>Statement — ₹${earned} earned, −₹${spent} spent</summary>
           <div class="ledger">
-            ${log.length ? log.map((e) => `<div class="led-row ${e.amt < 0 ? "neg" : ""}"><span>${e.icon} ${esc(e.label)} <span class="muted small">${e.month ? parseKey(e.date).toLocaleDateString("en-IN", { month: "long" }) : e.week ? "wk " + fmtShort(parseKey(e.date)) : fmtShort(parseKey(e.date))}</span></span><b>${e.amt < 0 ? "−₹" + Math.abs(e.amt) : "+₹" + e.amt}</b></div>`).join("") : `<div class="led-row"><span class="muted">No rewards earned yet — clear a 50%+ day to start.</span></div>`}
-            ${Game.spentTotal() ? `<div class="led-row"><span>💸 Redeemed</span><b>−₹${Game.spentTotal()}</b></div>` : ""}
+            ${log.length ? log.map((e) => `<div class="led-row ${e.amt < 0 ? "neg" : ""}"><span>${e.icon} ${esc(e.label)} <span class="muted small">${e.month ? parseKey(e.date).toLocaleDateString("en-IN", { month: "long" }) : e.week ? "wk " + fmtShort(parseKey(e.date)) : fmtShort(parseKey(e.date))}</span></span><b>${e.amt < 0 ? "−₹" + Math.abs(e.amt) : "+₹" + e.amt}</b></div>`).join("") : `<div class="led-row"><span class="muted">No credits yet — reach 30%+ on a day to start earning.</span></div>`}
+            ${spent ? `<div class="led-row"><span>💸 Spent</span><b>−₹${spent}</b></div>` : ""}
             <div class="led-row total"><span>Balance</span><b>${rs(bal)}</b></div>
           </div>
         </details>
@@ -1211,13 +1210,13 @@
         saveState(); render(); celebrate(); toast("🍻 NIGHT OUT EARNED — go celebrate, you crushed the month!");
         break;
       }
-      case "perk": {
-        const p = Game.PERKS.find((x) => x.id === arg);
-        if (!p) break;
-        if (!Game.canPerk(p)) { toast(Game.claimedToday(p.id) ? "Already enjoyed today 😊" : Game.coffeeLocked() && p.id === "coffee" ? "☕ Locked today" : "Clear today's quest to unlock"); break; }
+      case "buy": {
+        const rw = Game.REWARDS.find((x) => x.id === arg);
+        if (!rw) break;
+        if (!Game.canSpend()) { toast("🔒 Spending frozen — log a winning day first"); break; }
         S.game = S.game || { claims: [] }; S.game.claims = S.game.claims || [];
-        S.game.claims.push({ date: fmtKey(today()), id: p.id, name: p.name, cost: 0 });
-        saveState(); render(); celebrate(); toast(`${p.emoji} ${p.name} — enjoy, you earned it!`);
+        S.game.claims.push({ date: fmtKey(today()), id: rw.id, name: rw.name, cost: rw.cost });
+        saveState(); render(); celebrate(); toast(`${rw.emoji} ${rw.name} — −₹${rw.cost}. Enjoy!`);
         break;
       }
       case "spendfill": {
@@ -1226,7 +1225,7 @@
         break;
       }
       case "spend": {
-        if (!Game.canSpend()) { toast("🔒 Spending frozen — clear a 50%+ day first"); break; }
+        if (!Game.canSpend()) { toast("🔒 Spending frozen — log a winning day first"); break; }
         const amtEl = document.getElementById("spendAmt"), whatEl = document.getElementById("spendWhat");
         const amt = Math.round(parseFloat(amtEl && amtEl.value) || 0);
         if (amt <= 0) { toast("Enter the amount you spent"); break; }
