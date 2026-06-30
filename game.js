@@ -190,12 +190,14 @@
     const months = [...new Set(allDayKeys().map((k) => k.slice(0, 7)))];
     for (const ym of months) { const mt = monthTier(parseKey(ym + "-01")); if (mt.tier) ev.push({ date: ym + "-15", month: true, icon: mt.tier.emoji, label: `${mt.tier.name} month (${Math.round(mt.frac * 100)}%)`, amt: mt.tier.bonus }); }
     for (const c of ((S().game && S().game.claims) || [])) ev.push({ date: c.date, spend: true, icon: c.id === "nightout" ? "🍻" : "💸", label: c.name + " (spent)", amt: -(c.cost || 0) });
+    const base = gameBaseline(); if (base > 0) ev.push({ date: (S().game && S().game.resetAt) || fmtKey(today()), reset: true, icon: "🔄", label: "Fresh start — previous balance cleared", amt: -base });
     ev.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
     return ev;
   }
   function earnedTotal() { let t = 0; for (const k of allDayKeys()) t += dayEarn(k); const weeks = [...new Set(allDayKeys().map((k) => fmtKey(monday(parseKey(k)))))]; for (const wk of weeks) { const wp = weeklyProgress(parseKey(wk)); for (const key in wp) if (wp[key].have >= wp[key].need) t += wp[key].reward; } const months = [...new Set(allDayKeys().map((k) => k.slice(0, 7)))]; for (const ym of months) { const mt = monthTier(parseKey(ym + "-01")); if (mt.tier) t += mt.tier.bonus; } return t; }
   function spentTotal() { return ((S().game && S().game.claims) || []).reduce((a, c) => a + (c.cost || 0), 0); }
-  function balance() { return earnedTotal() - spentTotal(); }
+  function gameBaseline() { return (S().game && S().game.baseline) || 0; }   // "start fresh" clears the running balance
+  function balance() { return earnedTotal() - spentTotal() - gameBaseline(); }
   function canSpend() { return true; }   // recovery mode replaced the freeze — spending is always open
   function buyCost(item) { return (item.id === "coffee" && dailyBuff(fmtKey(today())).id === "coffee_half") ? Math.round(item.cost / 2) : item.cost; }
   function availableNow() { const b = balance(); return REWARDS.map((r) => ({ ...r, n: b > 0 ? Math.floor(b / buyCost(r)) : 0 })); }

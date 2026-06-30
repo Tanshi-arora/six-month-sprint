@@ -701,7 +701,7 @@
       </div>
 
       <div class="card span-2">
-        <h3>💰 Fun Fund <span class="muted small">one balance for everything</span></h3>
+        <h3>💰 Fun Fund <span class="muted small">one balance for everything</span> <button class="iconbtn" data-act="gamereset" title="zero the balance and bank fresh from today" style="margin-left:auto">↺ Start fresh</button></h3>
         <div class="wallet-bal ${bal < 0 ? "neg" : ""}">${rs(bal)}</div>
         <p class="sub">Bank credits by winning days; treats cost credits. ${bal < 0 ? `<b style="color:var(--red)">₹${Math.abs(bal)} in the red — earn it back!</b>` : ""}</p>
         ${bal > 0 ? `<div class="avail-row">Available now: ${avail.filter((a) => a.n > 0).map((a) => `<span class="avail">${a.emoji}×${a.n}</span>`).join("") || `<span class="muted small">keep banking…</span>`}</div>` : ""}
@@ -1286,6 +1286,14 @@
         for (let n = log.length - 1; n >= 0; n--) { if (log[n].id === arg && log[n].date === tk) { idx = n; break; } }
         if (idx < 0) for (let n = log.length - 1; n >= 0; n--) { if (log[n].id === arg) { idx = n; break; } }
         if (idx >= 0) { const rm = log.splice(idx, 1)[0]; saveState(); render(); toast(`Undid +${rm.xp} XP (${rm.label})`); }
+        break;
+      }
+      case "gamereset": {
+        if (!confirm("Start the Fun Fund fresh?\n\nThis zeroes your current balance and banks forward from today. Your logged data and Identity XP are not touched.")) break;
+        S.game = S.game || {};
+        S.game.baseline = Game.earnedTotal() - Game.spentTotal();   // capture current net so balance reads 0
+        S.game.resetAt = fmtKey(today());
+        saveState(); render(); toast("🔄 Fresh start — balance reset to ₹0");
         break;
       }
       case "buy": {
