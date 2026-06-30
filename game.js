@@ -1,7 +1,7 @@
 // Game Mode — a play layer on top of the existing scores. Pure functions read window.S / window.Score.
 // Wallet is a symbolic balance (points): earned deterministically from history, spent via claims.
 (function () {
-  const { fmtKey, parseKey, addDays, today, weekKeys, monday } = window.D;
+  const { fmtKey, parseKey, addDays, today, weekKeys, monday, monthKeys } = window.D;
 
   // --- tunables (start easy; the "beat yesterday" bar self-hardens as your baseline rises) ---
   const EARN = {
@@ -11,8 +11,10 @@
     combo: 25,           // each combo
     streak: { 3: 150, 5: 200, 10: 500, 20: 1000 },
     weekly: { diet: 200, study: 300, gym: 250, wake: 150 },
+    month: 1000,         // bonus for a good month (on top of the Night Out)
     penalty2bad: 100,    // two bad days in a row
   };
+  const MONTH_FRAC = 0.7;  // a "good month" = at least 70% of the month's tracked days are wins
   const BAD = 40;        // below this % = a "bad day"
   const MIN_PCT = 50;    // floor: a day must reach 50% to bank ANY reward
   // Free perks — permission to indulge, unlocked simply by clearing today's quest (no money).
@@ -144,6 +146,19 @@
     };
   }
 
+  // ---- monthly milestone: a good month earns a Night Out 🍻 ----
+  function monthGood(d) {
+    const keys = monthKeys(d).filter((k) => k >= PLAN_START && k <= fmtKey(today()));
+    const have = keys.filter((k) => goodDay(k)).length;
+    const need = Math.max(1, Math.round(keys.length * MONTH_FRAC));
+    return { have, need, avail: keys.length, earned: have >= need };
+  }
+  function claimedThisMonth(id) {
+    const ym = fmtKey(today()).slice(0, 7);
+    return (((S().game && S().game.claims) || []).some((c) => c.id === id && (c.date || "").slice(0, 7) === ym));
+  }
+  function canNightOut() { return monthGood(today()).earned && !claimedThisMonth("nightout"); }
+
   // ---- earnings (deterministic from history) ----
   function allDayKeys() {
     const out = []; let k = PLAN_START; const end = fmtKey(today());
@@ -153,7 +168,7 @@
   }
   // Itemised "where the balance came from", computed deterministically from history.
   function earnBreakdown() {
-    const b = { daily: 0, dailyDays: 0, bonus: 0, chest: 0, combo: 0, comboCount: 0, streak: 0, weekly: 0, penalty: 0 };
+    const b = { daily: 0, dailyDays: 0, bonus: 0, chest: 0, combo: 0, comboCount: 0, streak: 0, weekly: 0, monthly: 0, penalty: 0 };
     for (const k of allDayKeys()) {
       const sc = questScore(k);
       if (hasData(k) && sc >= MIN_PCT) {            // 50% floor — only quality days bank rewards
@@ -165,6 +180,9 @@
         if (EARN.streak[st]) b.streak += EARN.streak[st];
       }
     }
+    // good-month bonus (per calendar month that hit the milestone)
+    const months = [...new Set(allDayKeys().map((k) => k.slice(0, 7)))];
+    for (const ym of months) if (monthGood(parseKey(ym + "-01")).earned) b.monthly += EARN.month;
     // Only the CURRENT slump drains the wallet — past gaps you recovered from don't keep biting.
     b.penalty = currentDrain();
     const weeks = [...new Set(allDayKeys().map((k) => fmtKey(monday(parseKey(k)))))];
@@ -172,7 +190,7 @@
       const wp = weeklyProgress(parseKey(wk));
       for (const key in wp) if (wp[key].have >= wp[key].need) b.weekly += wp[key].reward;
     }
-    b.total = b.daily + b.bonus + b.chest + b.combo + b.streak + b.weekly - b.penalty;
+    b.total = b.daily + b.bonus + b.chest + b.combo + b.streak + b.weekly + b.monthly - b.penalty;
     return b;
   }
   function earnedTotal() { return earnBreakdown().total; }
@@ -237,7 +255,7 @@
   window.Game = {
     EARN, REWARDS, PERKS, BAD, MIN_PCT, WEEKLY_TARGETS, LADDERS, SKIP_RULES,
     questScore, goodDay, beatYesterday, currentStreak, streakEndingAt, combosFor,
-    skipState, weeklyProgress, earnedTotal, spentTotal, balance,
+    skipState, weeklyProgress, monthGood, canNightOut, claimedThisMonth, earnedTotal, spentTotal, balance,
     dailyReward, punishment, coffeeLocked, redeemLocked, canClaim, canPerk, claimedToday, level, qaQuestionsToday, earnBreakdown,
   };
 })();

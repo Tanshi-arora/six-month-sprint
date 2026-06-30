@@ -647,7 +647,7 @@
   // ----------------------------------------------------------------- GAME ---
   function renderGame() {
     const cap = (s) => s[0].toUpperCase() + s.slice(1);
-    const rewardEmoji = (id) => (Game.REWARDS.concat(Game.PERKS).find((r) => r.id === id) || {}).emoji || "🎟️";
+    const rewardEmoji = (id) => id === "nightout" ? "🍻" : (Game.REWARDS.concat(Game.PERKS).find((r) => r.id === id) || {}).emoji || "🎟️";
     const k = fmtKey(today());
     const yk = fmtKey(addDays(today(), -1));
     const tScore = Game.questScore(k), yScore = Game.questScore(yk);
@@ -662,6 +662,7 @@
     const sk = Game.skipState(k);
     const bd = Game.earnBreakdown();
     const claims = (((S.game && S.game.claims) || []).slice().reverse());
+    const mg = Game.monthGood(today()), nightOut = Game.canNightOut(), nightDone = Game.claimedThisMonth("nightout");
 
     return `
     ${pun.recovery ? `<div class="card span-3 tint-pink"><h3>🩹 Recovery Quest</h3><p class="sub">${pun.note}</p></div>` : ""}
@@ -675,6 +676,15 @@
           <div class="q-box"><span class="q-num ${beat ? "win" : ""}">${tScore}%</span><span class="q-lbl">today</span></div>
         </div>
         <div class="quest-status ${beat ? "win" : ""}">${beat ? `Quest cleared! ${reward ? reward.emoji + " " + reward.text : "+₹" + Game.EARN.daily}` : beatY ? `Beat yesterday 👏 — now reach <b>${Game.MIN_PCT}%</b> to bank the reward (at ${tScore}%)` : `${tScore > 0 ? "Keep going" : "Log something"} — match ${yScore}% and clear <b>${Game.MIN_PCT}%</b> to win`}</div>
+      </div>
+
+      <div class="card span-3 ${mg.earned ? "tint-green" : "tint-pink"}">
+        <h3>🍻 Monthly Milestone <span class="muted small">${mg.have}/${mg.need} winning days this month</span></h3>
+        ${mg.earned
+          ? (nightDone
+              ? `<p class="sub">Night out claimed this month — cheers! 🥂 Reset rolls over next month.</p>`
+              : `<div class="month-win"><span>🎉 Month smashed! You earned a <b>Night Out</b> 🍻 (+₹${Game.EARN.month} banked too)</span><button class="btn primary" data-act="nightout">🍻 Cash in your Night Out</button></div>`)
+          : `<p class="sub"><b>${mg.need - mg.have}</b> more winning day${mg.need - mg.have === 1 ? "" : "s"} this month unlocks a Night Out 🍻 + ₹${Game.EARN.month}</p>${C.bar(Math.min(100, (mg.have / mg.need) * 100), "var(--pink)")}`}
       </div>
 
       <div class="card span-2">
@@ -705,6 +715,7 @@
             ${bd.combo ? `<div class="led-row"><span>⚡ Combos × ${bd.comboCount}</span><b>+₹${bd.combo}</b></div>` : ""}
             ${bd.streak ? `<div class="led-row"><span>🔥 Streak milestones</span><b>+₹${bd.streak}</b></div>` : ""}
             ${bd.weekly ? `<div class="led-row"><span>🗓️ Weekly quests</span><b>+₹${bd.weekly}</b></div>` : ""}
+            ${bd.monthly ? `<div class="led-row"><span>🍻 Good-month bonus</span><b>+₹${bd.monthly}</b></div>` : ""}
             ${bd.penalty ? `<div class="led-row neg"><span>😬 Bad-day penalties</span><b>−₹${bd.penalty}</b></div>` : ""}
             <div class="led-row"><span>💸 Redeemed</span><b>−₹${Game.spentTotal()}</b></div>
             <div class="led-row total"><span>Balance</span><b>₹${bal}</b></div>
@@ -1194,6 +1205,13 @@
         const cur = (getDay(tk, false).skipCat) || null;
         setDay(tk, { skipCat: cur === arg ? null : arg });   // toggle today's strategic skip
         render();
+        break;
+      }
+      case "nightout": {
+        if (!Game.canNightOut()) { toast(Game.claimedThisMonth("nightout") ? "Already claimed this month 🥂" : "Win more days this month first"); break; }
+        S.game = S.game || { claims: [] }; S.game.claims = S.game.claims || [];
+        S.game.claims.push({ date: fmtKey(today()), id: "nightout", name: "Night out 🍻", cost: 0 });
+        saveState(); render(); celebrate(); toast("🍻 NIGHT OUT EARNED — go celebrate, you crushed the month!");
         break;
       }
       case "perk": {
