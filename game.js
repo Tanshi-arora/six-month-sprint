@@ -15,16 +15,18 @@
   };
   const BAD = 40;        // below this % = a "bad day"
   const MIN_PCT = 50;    // floor: a day must reach 50% to bank ANY reward
+  // Free perks — permission to indulge, unlocked simply by clearing today's quest (no money).
+  const PERKS = [
+    { id: "coffee", name: "Coffee outside", emoji: "☕" },
+    { id: "treat", name: "Sweet treat", emoji: "🍰" },
+    { id: "momos", name: "Momos / a craving", emoji: "🥟" },
+    { id: "sleepin", name: "Sleep in extra", emoji: "😴" },
+  ];
+  // Money rewards — spend your banked balance. Ranked: Spa highest → Shopping → Restaurant.
   const REWARDS = [
-    { id: "coffee", name: "Fancy Coffee", emoji: "☕", cost: 150 },
-    { id: "treat", name: "Sweet Treat", emoji: "🍰", cost: 200 },
-    { id: "episode", name: "Guilt-free episode", emoji: "📺", cost: 200 },
-    { id: "sleepin", name: "Sleep-in morning", emoji: "😴", cost: 250 },
-    { id: "movie", name: "Movie / outing", emoji: "🍿", cost: 300 },
-    { id: "shopping", name: "Shopping spree", emoji: "🛍️", cost: 400 },
-    { id: "book", name: "New book", emoji: "📚", cost: 450 },
-    { id: "restaurant", name: "Restaurant meal", emoji: "🍽️", cost: 700 },
-    { id: "spa", name: "Spa / self-care day", emoji: "💆", cost: 1000 },
+    { id: "spa", name: "Spa / mani-pedi / blowout", emoji: "💆", cost: 2000 },
+    { id: "shopping", name: "Shopping", emoji: "🛍️", cost: 1200 },
+    { id: "restaurant", name: "Restaurant meal", emoji: "🍽️", cost: 600 },
   ];
   const WEEKLY_TARGETS = { diet: 5, study: 6, gym: 4, wake: 6 };
 
@@ -152,7 +154,6 @@
   // Itemised "where the balance came from", computed deterministically from history.
   function earnBreakdown() {
     const b = { daily: 0, dailyDays: 0, bonus: 0, chest: 0, combo: 0, comboCount: 0, streak: 0, weekly: 0, penalty: 0 };
-    let consecBad = 0; const tk = fmtKey(today());
     for (const k of allDayKeys()) {
       const sc = questScore(k);
       if (hasData(k) && sc >= MIN_PCT) {            // 50% floor — only quality days bank rewards
@@ -163,9 +164,9 @@
         const st = streakEndingAt(k);
         if (EARN.streak[st]) b.streak += EARN.streak[st];
       }
-      // default too long → wallet drains harder each consecutive default day (today excluded; it's in progress)
-      if (k !== tk) { if (sc < BAD) { consecBad++; if (consecBad >= 2) b.penalty += 50 * consecBad; } else consecBad = 0; }
     }
+    // Only the CURRENT slump drains the wallet — past gaps you recovered from don't keep biting.
+    b.penalty = currentDrain();
     const weeks = [...new Set(allDayKeys().map((k) => fmtKey(monday(parseKey(k)))))];
     for (const wk of weeks) {
       const wp = weeklyProgress(parseKey(wk));
@@ -182,15 +183,22 @@
   function dailyReward(key) {
     const sc = questScore(key);
     if (!hasData(key)) return null;
-    if (sc >= 100) return { emoji: "🎁", text: "Mystery Chest unlocked!" };
-    if (sc >= 80) return { emoji: "📺", text: "Guilt-free YouTube" };
-    if (goodDay(key)) return { emoji: "☕", text: "Fancy Coffee unlocked — you beat yesterday!" };
+    if (sc >= 100) return { emoji: "🎁", text: "Mystery Chest — free treats + bonus ₹!" };
+    if (sc >= 80) return { emoji: "🌟", text: "80%+ day — free treats unlocked" };
+    if (goodDay(key)) return { emoji: "🎟️", text: "today's free treats are unlocked!" };
     return null;
   }
   function badRun(key) { // consecutive default days (empty OR <40%) ending at key
     let n = 0, k = key;
     while (k >= PLAN_START && questScore(k) < BAD) { n++; k = prevKey(k); }
     return n;
+  }
+  // Wallet drain from the ACTIVE slump only (default run ending yesterday). A 50%+ today clears it.
+  function currentDrain() {
+    const tk = fmtKey(today()), yk = prevKey(tk);
+    if (hasData(tk) && questScore(tk) >= MIN_PCT) return 0;   // recovered today → no drain
+    const run = badRun(yk);
+    return run >= 2 ? 50 * (run * (run + 1) / 2 - 1) : 0;
   }
   function punishment() {
     const tk = fmtKey(today());
@@ -199,18 +207,27 @@
     if (hasData(yk) && questScore(yk) < BAD) { out.coffeeLocked = true; out.note = "Yesterday dipped below 40% — no coffee claim today."; }
     const run = badRun(yk);   // completed days only; today is still in progress
     const todayOk = hasData(tk) && questScore(tk) >= MIN_PCT;   // a 50%+ today thaws the freeze
-    if (run >= 2) out.lostWallet = 50 * (run * (run + 1) / 2 - 1);   // cumulative drain, grows each bad day
-    if (run >= 3 && !todayOk) { out.recovery = true; out.redeemLocked = true; out.note = `${run} low days in a row — redemptions are FROZEN and the wallet drained (−₹${out.lostWallet}). Log a 50%+ day to thaw them.`; }
-    else if (run >= 3 && todayOk) { out.note = `Back on track — you cleared 50% today, redemptions thawed. (Defaulting cost you ₹${out.lostWallet}.)`; }
+    out.lostWallet = currentDrain();
+    if (run >= 3 && !todayOk) { out.recovery = true; out.redeemLocked = true; out.note = `${run} low days in a row — redemptions are FROZEN and the wallet is down −₹${out.lostWallet}. Log a 50%+ day to thaw and restore it.`; }
+    else if (run >= 3 && todayOk) { out.note = `Back on track — you cleared 50% today, redemptions thawed and balance restored.`; }
     return out;
   }
   function coffeeLocked() { return punishment().coffeeLocked; }
   function redeemLocked() { return punishment().redeemLocked; }
 
-  function canClaim(item) {
-    if (redeemLocked()) return false;                 // default too long → offers frozen
-    if (balance() < item.cost) return false;
-    if (item.id === "coffee" && coffeeLocked()) return false;
+  function canClaim(item) {                            // money rewards
+    if (redeemLocked()) return false;                  // default too long → offers frozen
+    return balance() >= item.cost;
+  }
+  function claimedToday(id) {
+    const tk = fmtKey(today());
+    return (((S().game && S().game.claims) || []).some((c) => c.date === tk && c.id === id));
+  }
+  // Free perks: unlocked when today's quest is cleared (50%+ and >= yesterday), once each per day.
+  function canPerk(perk) {
+    if (!goodDay(fmtKey(today()))) return false;
+    if (claimedToday(perk.id)) return false;
+    if (perk.id === "coffee" && coffeeLocked()) return false;
     return true;
   }
 
@@ -218,9 +235,9 @@
   function level() { const e = earnedTotal(); return Math.max(1, Math.floor(e / 1000) + 1); }
 
   window.Game = {
-    EARN, REWARDS, BAD, MIN_PCT, WEEKLY_TARGETS, LADDERS, SKIP_RULES,
+    EARN, REWARDS, PERKS, BAD, MIN_PCT, WEEKLY_TARGETS, LADDERS, SKIP_RULES,
     questScore, goodDay, beatYesterday, currentStreak, streakEndingAt, combosFor,
     skipState, weeklyProgress, earnedTotal, spentTotal, balance,
-    dailyReward, punishment, coffeeLocked, redeemLocked, canClaim, level, qaQuestionsToday, earnBreakdown,
+    dailyReward, punishment, coffeeLocked, redeemLocked, canClaim, canPerk, claimedToday, level, qaQuestionsToday, earnBreakdown,
   };
 })();

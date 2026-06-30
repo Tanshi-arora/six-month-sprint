@@ -647,7 +647,7 @@
   // ----------------------------------------------------------------- GAME ---
   function renderGame() {
     const cap = (s) => s[0].toUpperCase() + s.slice(1);
-    const rewardEmoji = (id) => (Game.REWARDS.find((r) => r.id === id) || {}).emoji || "🎟️";
+    const rewardEmoji = (id) => (Game.REWARDS.concat(Game.PERKS).find((r) => r.id === id) || {}).emoji || "🎟️";
     const k = fmtKey(today());
     const yk = fmtKey(addDays(today(), -1));
     const tScore = Game.questScore(k), yScore = Game.questScore(yk);
@@ -680,11 +680,20 @@
       <div class="card span-2">
         <h3>💰 Reward Wallet <span class="muted small">balance you've banked</span></h3>
         <div class="wallet-bal">₹${bal}</div>
-        <p class="sub">Only days that reach <b>${Game.MIN_PCT}%</b> bank rewards. Tap a treat to redeem (logged below). ${pun.redeemLocked ? `<b style="color:var(--red)">🔒 Redemptions frozen — log a ${Game.MIN_PCT}%+ day to thaw</b>` : pun.coffeeLocked ? `<b style="color:var(--orange)">☕ Coffee locked today</b>` : ""}</p>
+        <p class="sub">Clear the day (${Game.MIN_PCT}%+ & ≥ yesterday) to unlock free treats; bank ₹ for the big ones. ${pun.redeemLocked ? `<b style="color:var(--red)">🔒 Redemptions frozen — log a ${Game.MIN_PCT}%+ day to thaw</b>` : pun.coffeeLocked ? `<b style="color:var(--orange)">☕ Coffee perk locked today</b>` : ""}</p>
+        <div class="reward-subhead">🎟️ Free when you clear today's quest</div>
         <div class="reward-grid">
+          ${Game.PERKS.map((p) => {
+            const can = Game.canPerk(p), used = Game.claimedToday(p.id);
+            return `<button class="reward perk ${can ? "" : "locked"}" ${can ? `data-act="perk:${p.id}"` : "disabled"} title="${used ? "enjoyed today ✓" : can ? "tap to treat yourself" : "win today to unlock"}">
+              <span class="r-emoji">${p.emoji}</span><span class="r-name">${p.name}</span><span class="r-cost">${used ? "✓ today" : "free"}</span></button>`;
+          }).join("")}
+        </div>
+        <div class="reward-subhead">💸 Spend your balance</div>
+        <div class="reward-grid money">
           ${Game.REWARDS.map((rw) => {
             const can = Game.canClaim(rw);
-            return `<button class="reward ${can ? "" : "locked"}" ${can ? `data-act="claim:${rw.id}"` : "disabled"} title="${can ? "tap to redeem" : "not enough / locked"}">
+            return `<button class="reward ${can ? "" : "locked"}" ${can ? `data-act="claim:${rw.id}"` : "disabled"} title="${can ? "tap to redeem" : "not enough / frozen"}">
               <span class="r-emoji">${rw.emoji}</span><span class="r-name">${rw.name}</span><span class="r-cost">₹${rw.cost}</span></button>`;
           }).join("")}
         </div>
@@ -703,7 +712,7 @@
         </details>
         <div class="redeemed">
           <div class="red-head">🎟️ Redeemed offers ${claims.length ? `<span class="muted small">${claims.length}</span>` : ""}</div>
-          ${claims.length ? claims.map((c, ri) => `<div class="red-row"><span>${rewardEmoji(c.id)} ${esc(c.name)} <span class="muted small">${fmtShort(parseKey(c.date))}</span></span><span class="red-right">−₹${c.cost} <button class="iconbtn" data-act="unclaim:${claims.length - 1 - ri}" title="undo">✕</button></span></div>`).join("") : `<p class="sub" style="margin:6px 0 0">Nothing redeemed yet — your unlocked treats will show here.</p>`}
+          ${claims.length ? claims.map((c, ri) => `<div class="red-row"><span>${rewardEmoji(c.id)} ${esc(c.name)} <span class="muted small">${fmtShort(parseKey(c.date))}</span></span><span class="red-right">${c.cost ? "−₹" + c.cost : "free"} <button class="iconbtn" data-act="unclaim:${claims.length - 1 - ri}" title="undo">✕</button></span></div>`).join("") : `<p class="sub" style="margin:6px 0 0">Nothing redeemed yet — your unlocked treats will show here.</p>`}
         </div>
       </div>
 
@@ -1187,10 +1196,19 @@
         render();
         break;
       }
+      case "perk": {
+        const p = Game.PERKS.find((x) => x.id === arg);
+        if (!p) break;
+        if (!Game.canPerk(p)) { toast(Game.claimedToday(p.id) ? "Already enjoyed today 😊" : Game.coffeeLocked() && p.id === "coffee" ? "☕ Locked today" : "Clear today's quest to unlock"); break; }
+        S.game = S.game || { claims: [] }; S.game.claims = S.game.claims || [];
+        S.game.claims.push({ date: fmtKey(today()), id: p.id, name: p.name, cost: 0 });
+        saveState(); render(); celebrate(); toast(`${p.emoji} ${p.name} — enjoy, you earned it!`);
+        break;
+      }
       case "claim": {
         const rw = Game.REWARDS.find((x) => x.id === arg);
         if (!rw) break;
-        if (!Game.canClaim(rw)) { toast(Game.coffeeLocked() && rw.id === "coffee" ? "☕ Locked today" : "Not enough balance yet"); break; }
+        if (!Game.canClaim(rw)) { toast(Game.redeemLocked() ? "🔒 Redemptions frozen" : "Not enough balance yet"); break; }
         S.game = S.game || { claims: [] };
         S.game.claims = S.game.claims || [];
         S.game.claims.push({ date: fmtKey(today()), id: rw.id, name: rw.name, cost: rw.cost });
