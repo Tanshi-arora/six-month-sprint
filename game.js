@@ -10,13 +10,10 @@
   };
   const BAD = 40, FLOOR = 30, RECOVERY_BAR = 40;
   const WEEKLY_TARGETS = { diet: 5, study: 6, gym: 4, wake: 6 };
-  const REWARDS = [
-    { id: "coffee", name: "Coffee", emoji: "☕", cost: 100 },
-    { id: "treat", name: "Sweet Treat", emoji: "🍰", cost: 150 },
-    { id: "momos", name: "Momos", emoji: "🥟", cost: 250 },
-    { id: "meal", name: "Meal", emoji: "🍔", cost: 500 },
-  ];
+  // No fixed prices — you log the real amount you spend on each.
   const SPEND_CATS = [
+    { id: "coffee", emoji: "☕", name: "Coffee" }, { id: "treat", emoji: "🍰", name: "Sweet Treat" },
+    { id: "momos", emoji: "🥟", name: "Momos" }, { id: "meal", emoji: "🍔", name: "Meal" },
     { id: "shopping", emoji: "🛍️", name: "Shopping" }, { id: "salon", emoji: "💇", name: "Salon" },
     { id: "trip", emoji: "✈️", name: "Trip" }, { id: "other", emoji: "✨", name: "Other" },
   ];
@@ -32,10 +29,10 @@
   };
   // Daily Buff — deterministic per date; game-layer only (no core-score changes).
   const BUFFS = [
-    { id: "coffee_half", emoji: "☕", label: "Coffee costs half today" },
     { id: "read_pays", emoji: "📚", label: "Reading pays +₹100 today" },
     { id: "combo_double", emoji: "⚡", label: "Combos pay double today" },
     { id: "win_bonus", emoji: "🎯", label: "+₹50 bonus if you win today" },
+    { id: "gym_bonus", emoji: "🏋️", label: "Gym/steps pays +₹75 today" },
   ];
   const MONTH_TIERS = [
     { id: "diamond", emoji: "💎", name: "Diamond", frac: 0.95, bonus: 2000 },
@@ -178,6 +175,7 @@
     // buff payouts
     if (buff.id === "read_pays" && (S().days[key] || {}).readMin >= 20) ev.push({ date: key, icon: "📚", label: "Buff: reading paid", amt: 100 });
     if (buff.id === "win_bonus" && goodDay(key)) ev.push({ date: key, icon: "🎯", label: "Buff: win bonus", amt: 50 });
+    if (buff.id === "gym_bonus" && ((S().days[key] || {}).gymClass || (S().days[key] || {}).steps10k)) ev.push({ date: key, icon: "🏋️", label: "Buff: gym paid", amt: 75 });
     return ev;
   }
   function dayEarn(key) { return dayEvents(key).reduce((a, e) => a + e.amt, 0); }
@@ -200,8 +198,6 @@
   function spentTotal() { const gs = gameStart(); return ((S().game && S().game.claims) || []).reduce((a, c) => a + ((c.date || "") >= gs ? (c.cost || 0) : 0), 0); }
   function balance() { return earnedTotal() - spentTotal(); }   // both scoped to the game start
   function canSpend() { return true; }   // recovery mode replaced the freeze — spending is always open
-  function buyCost(item) { return (item.id === "coffee" && dailyBuff(fmtKey(today())).id === "coffee_half") ? Math.round(item.cost / 2) : item.cost; }
-  function availableNow() { const b = balance(); return REWARDS.map((r) => ({ ...r, n: b > 0 ? Math.floor(b / buyCost(r)) : 0 })); }
 
   function punishment() {
     const tk = fmtKey(today()), run = badRun(prevKey(tk));
@@ -245,10 +241,10 @@
   function level() { return Math.max(1, Math.floor(earnedTotal() / 1000) + 1); }
 
   window.Game = {
-    EARN, REWARDS, SPEND_CATS, FLOOR, BAD, RECOVERY_BAR, WEEKLY_TARGETS, LADDERS, SKIP_RULES, MONTH_TIERS, BUFFS,
+    EARN, SPEND_CATS, FLOOR, BAD, RECOVERY_BAR, WEEKLY_TARGETS, LADDERS, SKIP_RULES, MONTH_TIERS, BUFFS,
     questScore, goodDay, recoveryActive, dayEvents, dayEarn, currentStreak, streakEndingAt, combosFor,
     skipState, recommendSkip, weeklyProgress, monthTier, canNightOut, claimedThisMonth,
-    earnedTotal, earnLog, spentTotal, balance, canSpend, buyCost, availableNow, dailyBuff,
+    earnedTotal, earnLog, spentTotal, balance, canSpend, dailyBuff,
     dailyReward, punishment, coachTip, nearMiss, level, qaQuestionsToday,
   };
 })();

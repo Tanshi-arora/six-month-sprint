@@ -657,7 +657,7 @@
   // ----------------------------------------------------------------- GAME ---
   function renderGame() {
     const cap = (s) => s[0].toUpperCase() + s.slice(1);
-    const rewardEmoji = (id) => id === "nightout" ? "🍻" : id === "spend" ? "💸" : (Game.REWARDS.find((r) => r.id === id) || {}).emoji || "🎟️";
+    const rewardEmoji = (id) => id === "nightout" ? "🍻" : (Game.SPEND_CATS.find((r) => r.id === id) || {}).emoji || "💸";
     const rs = (n) => (n < 0 ? "−₹" + Math.abs(n) : "₹" + n);
     const k = fmtKey(today());
     const yk = fmtKey(addDays(today(), -1));
@@ -674,7 +674,7 @@
     const log = Game.earnLog();
     const claims = (((S.game && S.game.claims) || []).slice().reverse());
     const mt = Game.monthTier(today()), nightDone = Game.claimedThisMonth("nightout");
-    const buff = Game.dailyBuff(k), avail = Game.availableNow(), rec = Game.recommendSkip(k);
+    const rec = Game.recommendSkip(k);
 
     return `
     ${pun.recovery ? `<div class="card span-3 tint-pink"><h3>🩹 Recovery Quest</h3><p class="sub">${pun.note}</p></div>` : ""}
@@ -703,17 +703,8 @@
       <div class="card span-2">
         <h3>💰 Fun Fund <span class="muted small">one balance for everything</span> <button class="iconbtn" data-act="gamereset" title="zero the balance and bank fresh from today" style="margin-left:auto">↺ Start fresh</button></h3>
         <div class="wallet-bal ${bal < 0 ? "neg" : ""}">${rs(bal)}</div>
-        <p class="sub">Bank credits by winning days, then unlock a treat once you can afford it.</p>
-        ${bal > 0 ? `<div class="avail-row">Available now: ${avail.filter((a) => a.n > 0).map((a) => `<span class="avail">${a.emoji}×${a.n}</span>`).join("") || `<span class="muted small">keep banking…</span>`}</div>` : ""}
-        <div class="reward-subhead">⚡ Quick treats${buff.id === "coffee_half" ? ` <span class="muted small">☕ half today!</span>` : ""}</div>
-        <div class="reward-grid">
-          ${Game.REWARDS.map((rw) => {
-            const cost = Game.buyCost(rw), half = cost < rw.cost, can = bal >= cost;
-            return `<button class="reward ${can ? "" : "locked"}" ${can ? `data-act="buy:${rw.id}"` : "disabled"} title="${can ? "tap to spend ₹" + cost : "earn ₹" + (cost - bal) + " more to unlock"}">
-              <span class="r-emoji">${rw.emoji}</span><span class="r-name">${rw.name}</span><span class="r-cost">${half ? `<s class="muted">₹${rw.cost}</s> ` : ""}₹${cost}${can ? "" : " 🔒"}</span></button>`;
-          }).join("")}
-        </div>
-        <div class="reward-subhead">💸 Spend an exact amount</div>
+        <p class="sub">Bank credits by winning days, then spend what you've got on whatever you like — you set the amount.</p>
+        <div class="reward-subhead">💸 Spend (you set the amount)</div>
         <div class="spend-row ${Game.canSpend() ? "" : "locked"}">
           <span class="spend-rs">₹</span>
           <input type="number" min="1" inputmode="numeric" class="tgt-num spend-amt" id="spendAmt" placeholder="amount" ${Game.canSpend() ? "" : "disabled"}>
@@ -1229,16 +1220,6 @@
         S.game = S.game || {};
         S.game.start = fmtKey(today());   // count credits only from today
         saveState(); render(); toast("🔄 Fresh start — balance reset to ₹0");
-        break;
-      }
-      case "buy": {
-        const rw = Game.REWARDS.find((x) => x.id === arg);
-        if (!rw) break;
-        const cost = Game.buyCost(rw);
-        if (Game.balance() < cost) { toast(`Earn ₹${cost - Game.balance()} more to unlock ${rw.name}`); break; }
-        S.game = S.game || { claims: [] }; S.game.claims = S.game.claims || [];
-        S.game.claims.push({ date: fmtKey(today()), id: rw.id, name: rw.name, cost });
-        saveState(); render(); celebrate(); toast(`${rw.emoji} ${rw.name} — −₹${cost}. Enjoy!`);
         break;
       }
       case "spendfill": {
