@@ -661,6 +661,7 @@
     const wp = Game.weeklyProgress(today());
     const sk = Game.skipState(k);
     const bd = Game.earnBreakdown();
+    const log = Game.earnLog();
     const claims = (((S.game && S.game.claims) || []).slice().reverse());
     const mg = Game.monthGood(today()), nightOut = Game.canNightOut(), nightDone = Game.claimedThisMonth("nightout");
 
@@ -709,15 +710,8 @@
         </div>
         <details class="wallet-info"><summary>Where did ₹${bd.total} come from?</summary>
           <div class="ledger">
-            ${bd.daily ? `<div class="led-row"><span>🎯 Beat/match yesterday × ${bd.dailyDays}</span><b>+₹${bd.daily}</b></div>` : ""}
-            ${bd.bonus ? `<div class="led-row"><span>⭐ 80%+ days</span><b>+₹${bd.bonus}</b></div>` : ""}
-            ${bd.chest ? `<div class="led-row"><span>🎁 100% days</span><b>+₹${bd.chest}</b></div>` : ""}
-            ${bd.combo ? `<div class="led-row"><span>⚡ Combos × ${bd.comboCount}</span><b>+₹${bd.combo}</b></div>` : ""}
-            ${bd.streak ? `<div class="led-row"><span>🔥 Streak milestones</span><b>+₹${bd.streak}</b></div>` : ""}
-            ${bd.weekly ? `<div class="led-row"><span>🗓️ Weekly quests</span><b>+₹${bd.weekly}</b></div>` : ""}
-            ${bd.monthly ? `<div class="led-row"><span>🍻 Good-month bonus</span><b>+₹${bd.monthly}</b></div>` : ""}
-            ${bd.penalty ? `<div class="led-row neg"><span>😬 Bad-day penalties</span><b>−₹${bd.penalty}</b></div>` : ""}
-            <div class="led-row"><span>💸 Redeemed</span><b>−₹${Game.spentTotal()}</b></div>
+            ${log.length ? log.map((e) => `<div class="led-row ${e.amt < 0 ? "neg" : ""}"><span>${e.icon} ${esc(e.label)} <span class="muted small">${e.month ? parseKey(e.date).toLocaleDateString("en-IN", { month: "long" }) : e.week ? "wk " + fmtShort(parseKey(e.date)) : fmtShort(parseKey(e.date))}</span></span><b>${e.amt < 0 ? "−₹" + Math.abs(e.amt) : "+₹" + e.amt}</b></div>`).join("") : `<div class="led-row"><span class="muted">No rewards earned yet — clear a 50%+ day to start.</span></div>`}
+            ${Game.spentTotal() ? `<div class="led-row"><span>💸 Redeemed</span><b>−₹${Game.spentTotal()}</b></div>` : ""}
             <div class="led-row total"><span>Balance</span><b>₹${bal}</b></div>
           </div>
         </details>

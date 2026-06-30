@@ -194,6 +194,29 @@
     return b;
   }
   function earnedTotal() { return earnBreakdown().total; }
+
+  // Dated, itemised statement of every reward earned (and penalties), newest first.
+  function earnLog() {
+    const ev = [];
+    for (const k of allDayKeys()) {
+      const sc = questScore(k);
+      if (hasData(k) && sc >= MIN_PCT) {
+        if (goodDay(k)) ev.push({ date: k, icon: "🎯", label: `Beat/matched yesterday — ${sc}%`, amt: EARN.daily });
+        if (sc >= 100) ev.push({ date: k, icon: "🎁", label: "Perfect 100% day", amt: EARN.chest });
+        else if (sc >= 80) ev.push({ date: k, icon: "🌟", label: `Strong day — ${sc}%`, amt: EARN.bonus80 });
+        for (const c of combosFor(k)) ev.push({ date: k, icon: c.emoji, label: `${c.name}`, amt: EARN.combo });
+        const st = streakEndingAt(k); if (EARN.streak[st]) ev.push({ date: k, icon: "🔥", label: `${st}-day win streak!`, amt: EARN.streak[st] });
+      }
+    }
+    const WLAB = { diet: "Diet target", study: "Study target", gym: "Gym classes", wake: "Wake-ups" };
+    const weeks = [...new Set(allDayKeys().map((k) => fmtKey(monday(parseKey(k)))))];
+    for (const wk of weeks) { const wp = weeklyProgress(parseKey(wk)); for (const key in wp) if (wp[key].have >= wp[key].need) ev.push({ date: wk, week: true, icon: "🗓️", label: `Weekly ${WLAB[key]} (${wp[key].have}/${wp[key].need})`, amt: wp[key].reward }); }
+    const months = [...new Set(allDayKeys().map((k) => k.slice(0, 7)))];
+    for (const ym of months) { const mg = monthGood(parseKey(ym + "-01")); if (mg.earned) ev.push({ date: ym + "-01", month: true, icon: "🍻", label: `Good month — Night Out (${mg.have}/${mg.need} wins)`, amt: EARN.month }); }
+    const drain = currentDrain(); if (drain > 0) ev.push({ date: fmtKey(today()), icon: "😬", label: "Slump penalty — recover to restore", amt: -drain });
+    ev.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+    return ev;
+  }
   function spentTotal() { return ((S().game && S().game.claims) || []).reduce((a, c) => a + (c.cost || 0), 0); }
   function balance() { return Math.max(0, earnedTotal() - spentTotal()); }
 
@@ -255,7 +278,7 @@
   window.Game = {
     EARN, REWARDS, PERKS, BAD, MIN_PCT, WEEKLY_TARGETS, LADDERS, SKIP_RULES,
     questScore, goodDay, beatYesterday, currentStreak, streakEndingAt, combosFor,
-    skipState, weeklyProgress, monthGood, canNightOut, claimedThisMonth, earnedTotal, spentTotal, balance,
+    skipState, weeklyProgress, monthGood, canNightOut, claimedThisMonth, earnedTotal, earnLog, spentTotal, balance,
     dailyReward, punishment, coffeeLocked, redeemLocked, canClaim, canPerk, claimedToday, level, qaQuestionsToday, earnBreakdown,
   };
 })();
