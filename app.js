@@ -647,7 +647,8 @@
   // ----------------------------------------------------------------- GAME ---
   function renderGame() {
     const cap = (s) => s[0].toUpperCase() + s.slice(1);
-    const rewardEmoji = (id) => id === "nightout" ? "🍻" : (Game.REWARDS.concat(Game.PERKS).find((r) => r.id === id) || {}).emoji || "🎟️";
+    const rewardEmoji = (id) => id === "nightout" ? "🍻" : id === "spend" ? "💸" : (Game.REWARDS.concat(Game.PERKS).find((r) => r.id === id) || {}).emoji || "🎟️";
+    const rs = (n) => (n < 0 ? "−₹" + Math.abs(n) : "₹" + n);
     const k = fmtKey(today());
     const yk = fmtKey(addDays(today(), -1));
     const tScore = Game.questScore(k), yScore = Game.questScore(yk);
@@ -690,7 +691,7 @@
 
       <div class="card span-2">
         <h3>💰 Reward Wallet <span class="muted small">balance you've banked</span></h3>
-        <div class="wallet-bal">₹${bal}</div>
+        <div class="wallet-bal ${bal < 0 ? "neg" : ""}">${rs(bal)}</div>
         <p class="sub">Clear the day (${Game.MIN_PCT}%+ & ≥ yesterday) to unlock free treats; bank ₹ for the big ones. ${pun.redeemLocked ? `<b style="color:var(--red)">🔒 Redemptions frozen — log a ${Game.MIN_PCT}%+ day to thaw</b>` : pun.coffeeLocked ? `<b style="color:var(--orange)">☕ Coffee perk locked today</b>` : ""}</p>
         <div class="reward-subhead">🎟️ Free when you clear today's quest</div>
         <div class="reward-grid">
@@ -700,19 +701,21 @@
               <span class="r-emoji">${p.emoji}</span><span class="r-name">${p.name}</span><span class="r-cost">${used ? "✓ today" : "free"}</span></button>`;
           }).join("")}
         </div>
-        <div class="reward-subhead">💸 Spend your balance</div>
-        <div class="reward-grid money">
-          ${Game.REWARDS.map((rw) => {
-            const can = Game.canClaim(rw);
-            return `<button class="reward ${can ? "" : "locked"}" ${can ? `data-act="claim:${rw.id}"` : "disabled"} title="${can ? "tap to redeem" : "not enough / frozen"}">
-              <span class="r-emoji">${rw.emoji}</span><span class="r-name">${rw.name}</span><span class="r-cost">₹${rw.cost}</span></button>`;
-          }).join("")}
+        <div class="reward-subhead">💸 Spend your credits ${bal < 0 ? `<span style="color:var(--red)">(₹${Math.abs(bal)} in the red — earn it back!)</span>` : "(negative is fine)"}</div>
+        <div class="spend-row ${Game.canSpend() ? "" : "locked"}">
+          <span class="spend-rs">₹</span>
+          <input type="number" min="1" inputmode="numeric" class="tgt-num spend-amt" id="spendAmt" placeholder="amount" ${Game.canSpend() ? "" : "disabled"}>
+          <input class="input spend-what" id="spendWhat" placeholder="on what? (shopping, dinner…)" ${Game.canSpend() ? "" : "disabled"}>
+          <button class="btn primary" data-act="spend" ${Game.canSpend() ? "" : "disabled"}>Spend</button>
         </div>
-        <details class="wallet-info"><summary>Where did ₹${bd.total} come from?</summary>
+        <div class="spend-chips">
+          ${[["🛍️", "Shopping"], ["🍽️", "Restaurant"], ["💆", "Spa / self-care"], ["🍿", "Outing"], ["✨", "Other"]].map(([e, n]) => `<button class="chip-spend" data-act="spendfill:${encodeURIComponent(n)}">${e} ${n}</button>`).join("")}
+        </div>
+        <details class="wallet-info"><summary>Statement — ₹${bd.total} earned, ${rs(Game.spentTotal() * -1)} spent</summary>
           <div class="ledger">
             ${log.length ? log.map((e) => `<div class="led-row ${e.amt < 0 ? "neg" : ""}"><span>${e.icon} ${esc(e.label)} <span class="muted small">${e.month ? parseKey(e.date).toLocaleDateString("en-IN", { month: "long" }) : e.week ? "wk " + fmtShort(parseKey(e.date)) : fmtShort(parseKey(e.date))}</span></span><b>${e.amt < 0 ? "−₹" + Math.abs(e.amt) : "+₹" + e.amt}</b></div>`).join("") : `<div class="led-row"><span class="muted">No rewards earned yet — clear a 50%+ day to start.</span></div>`}
             ${Game.spentTotal() ? `<div class="led-row"><span>💸 Redeemed</span><b>−₹${Game.spentTotal()}</b></div>` : ""}
-            <div class="led-row total"><span>Balance</span><b>₹${bal}</b></div>
+            <div class="led-row total"><span>Balance</span><b>${rs(bal)}</b></div>
           </div>
         </details>
         <div class="redeemed">
@@ -1217,14 +1220,20 @@
         saveState(); render(); celebrate(); toast(`${p.emoji} ${p.name} — enjoy, you earned it!`);
         break;
       }
-      case "claim": {
-        const rw = Game.REWARDS.find((x) => x.id === arg);
-        if (!rw) break;
-        if (!Game.canClaim(rw)) { toast(Game.redeemLocked() ? "🔒 Redemptions frozen" : "Not enough balance yet"); break; }
-        S.game = S.game || { claims: [] };
-        S.game.claims = S.game.claims || [];
-        S.game.claims.push({ date: fmtKey(today()), id: rw.id, name: rw.name, cost: rw.cost });
-        saveState(); render(); celebrate(); toast(`${rw.emoji} ${rw.name} unlocked — enjoy!`);
+      case "spendfill": {
+        const whatEl = document.getElementById("spendWhat");
+        if (whatEl) { whatEl.value = decodeURIComponent(arg); const a = document.getElementById("spendAmt"); if (a) a.focus({ preventScroll: true }); }
+        break;
+      }
+      case "spend": {
+        if (!Game.canSpend()) { toast("🔒 Spending frozen — clear a 50%+ day first"); break; }
+        const amtEl = document.getElementById("spendAmt"), whatEl = document.getElementById("spendWhat");
+        const amt = Math.round(parseFloat(amtEl && amtEl.value) || 0);
+        if (amt <= 0) { toast("Enter the amount you spent"); break; }
+        const what = ((whatEl && whatEl.value) || "").trim() || "Spend";
+        S.game = S.game || { claims: [] }; S.game.claims = S.game.claims || [];
+        S.game.claims.push({ date: fmtKey(today()), id: "spend", name: what, cost: amt });
+        saveState(); render(); toast(`Spent ₹${amt} on ${what}`);
         break;
       }
       case "unclaim": {

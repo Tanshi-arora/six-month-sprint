@@ -507,3 +507,14 @@ ul.cleanlist { margin: 6px 0; padding-left: 20px; }
 
 /* dated earnings statement can get long */
 .ledger { max-height: 340px; overflow-y: auto; }
+
+/* credit-based spending */
+.wallet-bal.neg { color: var(--red); }
+.spend-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.spend-row.locked { opacity: .5; }
+.spend-rs { font-weight: 800; font-size: 16px; }
+.spend-amt { width: 92px; }
+.spend-what { flex: 1; min-width: 130px; }
+.spend-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+.chip-spend { padding: 5px 11px; border-radius: 99px; border: 1.5px solid var(--line); background: #fff; font-size: 12px; font-weight: 600; }
+.chip-spend:hover { border-color: var(--indigo); }

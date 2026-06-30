@@ -219,7 +219,8 @@
     return ev;
   }
   function spentTotal() { return ((S().game && S().game.claims) || []).reduce((a, c) => a + (c.cost || 0), 0); }
-  function balance() { return Math.max(0, earnedTotal() - spentTotal()); }
+  function balance() { return earnedTotal() - spentTotal(); }   // credit ledger — may go negative
+  function canSpend() { return !redeemLocked(); }               // spend freely (even into the red), unless in a deep slump
 
   // ---- daily reward + punishment flags ----
   function dailyReward(key) {
@@ -280,6 +281,6 @@
     EARN, REWARDS, PERKS, BAD, MIN_PCT, WEEKLY_TARGETS, LADDERS, SKIP_RULES,
     questScore, goodDay, beatYesterday, currentStreak, streakEndingAt, combosFor,
     skipState, weeklyProgress, monthGood, canNightOut, claimedThisMonth, earnedTotal, earnLog, spentTotal, balance,
-    dailyReward, punishment, coffeeLocked, redeemLocked, canClaim, canPerk, claimedToday, level, qaQuestionsToday, earnBreakdown,
+    dailyReward, punishment, coffeeLocked, redeemLocked, canClaim, canSpend, canPerk, claimedToday, level, qaQuestionsToday, earnBreakdown,
   };
 })();
