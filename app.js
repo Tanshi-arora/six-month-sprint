@@ -112,6 +112,30 @@
   const PLAN_SUBJECTS = ["qa", "dilr", "varc", "vocab"]; // all sequential, item-based topic plans
   const PLAN_START = window.PLAN_START || "2026-06-15"; // calendar starts here; no future logging
   if (UI.dateKey < PLAN_START) UI.dateKey = PLAN_START; // never open on a pre-start date
+
+  // ── Weekday-only study model ────────────────────────────────────────────────
+  // The whole week's load is packed into Mon–Fri (weekly ÷ 5). Weekends are rest:
+  // the tiles then show only what's still left for the week (catch-up), never a fresh target.
+  const QA_AIM_WD = 35, QA_CAP_WD = 42;                 // 25×7/5 aim, 30×7/5 hard cap
+  const WEEKLY_AIM = { qa: 175, lr: 56, di: 28, varc: 14, vocab: 5 }; // volume per week
+  const isStudyWknd = (k) => { const w = parseKey(k).getDay(); return w === 0 || w === 6; };
+  const wdBetween = (fromKey, endKey) => {            // weekdays remaining incl. today → deadline
+    let n = 0, d = parseKey(fromKey); const e = parseKey(endKey);
+    while (d <= e) { const w = d.getDay(); if (w !== 0 && w !== 6) n++; d = addDays(d, 1); }
+    return Math.max(1, n);
+  };
+  const trackChs = (sub) => {
+    if (sub === "qa") return S.chapters.filter((c) => (c.subject || "qa") === "qa");
+    if (sub === "lr") return S.chapters.filter((c) => c.subject === "dilr" && !/^DI:/.test(c.name));
+    if (sub === "di") return S.chapters.filter((c) => c.subject === "dilr" && /^DI:/.test(c.name));
+    return S.chapters.filter((c) => c.subject === sub); // varc, vocab
+  };
+  const doneWeekBefore = (sub, dateKey) => {          // logged for this track, this week, before today
+    const chs = trackChs(sub);
+    return weekKeys(parseKey(dateKey)).filter((x) => x >= PLAN_START && x < dateKey)
+      .reduce((a, x) => { const qa = (S.days[x] || {}).qa || {}; return a + chs.reduce((b, c) => b + (qa[c.id] || 0), 0); }, 0);
+  };
+  const weekLeftover = (sub, dateKey) => Math.max(0, (WEEKLY_AIM[sub] || 0) - doneWeekBefore(sub, dateKey));
   // CAT mock cadence by month
   const MOCK_PLAN = "Jul: 1 / 2 weeks · Aug: 1 / week · Sep: 2 / week · Oct-Nov: 2-3 / week";
   const MEALS = [
@@ -207,10 +231,19 @@
     // QA: aim QA_AIM/day, but never demand more than QA_CAP — backlog just stretches the timeline
     // (the finish date floats instead of the daily load spiking). VARC/Vocab stay light (1/day).
     let dailyTarget = 1;
+    const wknd = isStudyWknd(dateKey);
     if (subject === "qa") {
-      const paced = Math.ceil((batchRemaining + doneToday) / daysLeft);
-      dailyTarget = Math.min(QA_CAP, Math.max(QA_AIM, paced));      // 25 aim, 30 hard cap
-      dailyTarget = Math.max(1, Math.min(dailyTarget, batchRemaining + doneToday)); // never more than what's left
+      if (wknd) {
+        // weekend: only the week's leftover (catch-up), never a fresh daily target
+        dailyTarget = Math.max(0, Math.min(weekLeftover("qa", dateKey), batchRemaining + doneToday));
+      } else {
+        // weekday: pace the whole week's load across the weekdays left to the deadline
+        const paced = Math.ceil((batchRemaining + doneToday) / wdBetween(dateKey, batch));
+        dailyTarget = Math.min(QA_CAP_WD, Math.max(QA_AIM_WD, paced)); // 35 aim, 42 hard cap
+        dailyTarget = Math.max(1, Math.min(dailyTarget, batchRemaining + doneToday));
+      }
+    } else if (wknd && subject === "vocab") {
+      dailyTarget = Math.min(weekLeftover("vocab", dateKey), current.st.remaining + doneToday);
     }
     return { subject, order, current, batch, batchRemaining, daysLeft, dailyTarget, doneToday };
   }
@@ -218,7 +251,7 @@
   // Weighted daily topic picker: each day picks ONE topic, weighted so topics with MORE questions
   // remaining come up MORE often. Deterministic per day (stable for tap/undo). Amount paced to 31 Aug.
   const SET_Q = 4; // 1 set = 4 questions
-  function rotatePlan(pool, dateKey, minChunk) {
+  function rotatePlan(pool, dateKey, minChunk, wkey) {
     const items = pool.map((ch) => ({ ch, st: Score.chapterStats(ch) }));
     const todayLog = (x) => (S.days[dateKey]?.qa || {})[x.ch.id] || 0;
     const active = items.filter((x) => x.st.remaining > 0 || todayLog(x) > 0);
@@ -229,24 +262,26 @@
     const seed = ((dayIdx * 9301 + 49297) % 233280) / 233280; // deterministic per-day 0..1
     let r = seed * totalW, current = active[0];
     for (const x of active) { r -= remStart(x); if (r < 0) { current = x; break; } }
-    const daysLeft = Math.max(1, Math.round((parseKey(AUG) - parseKey(dateKey)) / 86400000) + 1);
     const rem = active.reduce((a, x) => a + x.st.remaining, 0);
-    const chunk = Math.max(minChunk, Math.ceil(rem / daysLeft));
+    // weekday: pace the week's load across weekdays left to the deadline. weekend: catch-up leftover only.
+    const chunk = isStudyWknd(dateKey)
+      ? weekLeftover(wkey, dateKey)
+      : Math.max(minChunk, Math.ceil(rem / wdBetween(dateKey, AUG)));
     const doneToday = todayLog(current);
     return { current, target: Math.min(chunk, doneToday + current.st.remaining), doneToday };
   }
   function dilrPlan(dateKey) {
     const all = S.chapters.filter((c) => c.subject === "dilr");
     if (!all.length) return null;
-    const lr = rotatePlan(all.filter((c) => !/^DI:/.test(c.name)), dateKey, 2 * SET_Q); // ~2 sets
-    const di = rotatePlan(all.filter((c) => /^DI:/.test(c.name)), dateKey, SET_Q);       // ~1 set
+    const lr = rotatePlan(all.filter((c) => !/^DI:/.test(c.name)), dateKey, 3 * SET_Q, "lr"); // ~3 sets (12)
+    const di = rotatePlan(all.filter((c) => /^DI:/.test(c.name)), dateKey, 6, "di");           // ~6/day
     if (!lr && !di) return { done: true };
     return { lr, di };
   }
   function varcPlan(dateKey) {
     const all = S.chapters.filter((c) => c.subject === "varc");
     if (!all.length) return null;
-    const v = rotatePlan(all, dateKey, 2);
+    const v = rotatePlan(all, dateKey, 3, "varc");
     return v ? v : { done: true };
   }
   const qaPlan = (dateKey) => planFor("qa", dateKey);
@@ -271,6 +306,31 @@
     const done = parts.reduce((a, p) => a + p.done, 0);
     return { parts, goal, done };
   }
+  // Generic version of qaBreakdown for any track (used on weekends so LR/DI/VARC catch-up
+  // spreads the week's leftover across their chapters, exactly like QA does).
+  function trackBreakdown(sub, dateKey, goalWanted) {
+    const rec = S.days[dateKey] || {};
+    const logged = (ch) => (rec.qa || {})[ch.id] || 0;
+    const order = trackChs(sub).map((ch) => ({ ch, st: Score.chapterStats(ch) })).sort((a, b) => (a.ch.ord ?? 99) - (b.ch.ord ?? 99));
+    let need = goalWanted; const parts = [];
+    for (const x of order) {
+      if (need <= 0) break;
+      const cap = x.st.remaining + logged(x.ch);
+      if (cap <= 0) continue;
+      const target = Math.min(need, cap);
+      parts.push({ ch: x.ch, target, done: Math.min(logged(x.ch), target) });
+      need -= target;
+    }
+    return { parts, goal: parts.reduce((a, p) => a + p.target, 0), done: parts.reduce((a, p) => a + p.done, 0) };
+  }
+  // What a track can still take today, for weekend catch-up = min(week leftover, its total remaining incl. today).
+  const weekendGoal = (sub, dateKey) => {
+    const cap = trackChs(sub).reduce((a, c) => {
+      const today = ((S.days[dateKey] || {}).qa || {})[c.id] || 0;
+      return a + Score.chapterStats(c).remaining + today;
+    }, 0);
+    return Math.min(weekLeftover(sub, dateKey), cap);
+  };
   const selDate = () => parseKey(UI.dateKey);
   const day = () => getDay(UI.dateKey, false);
   const patchDay = (p) => { setDay(UI.dateKey, p); render(); };
@@ -284,8 +344,10 @@
     if (sub === "read") { setDay(UI.dateKey, { readMin: n }); render(); return n >= 20; }
     const qa = { ...(r.qa || {}) };
     let goal = 1, doneNow = 0;
-    if (sub === "qa" || sub === "vocab") {
-      const chs = S.chapters.filter((c) => (c.subject || "qa") === sub);
+    const wknd = isStudyWknd(UI.dateKey);
+    // On weekends every subject distributes across its chapters (catch-up); on weekdays QA/Vocab do too.
+    if (sub === "qa" || sub === "vocab" || (wknd && (sub === "lr" || sub === "di" || sub === "varc"))) {
+      const chs = trackChs(sub);
       const order = chs
         .map((ch) => ({ ch, room: Score.chapterStats(ch).remaining + ((r.qa || {})[ch.id] || 0) }))
         .sort((a, b) => (a.ch.ord ?? 99) - (b.ch.ord ?? 99));
@@ -293,7 +355,9 @@
       let need = n;
       for (const x of order) { if (need <= 0) break; const add = Math.min(need, x.room); if (add > 0) { qa[x.ch.id] = add; need -= add; } }
       doneNow = n - need;
-      goal = sub === "qa" ? (qaBreakdown(UI.dateKey)?.goal || 1) : 1;
+      goal = sub === "qa" ? (qaBreakdown(UI.dateKey)?.goal || 1)
+        : sub === "vocab" ? (wknd ? (planFor("vocab", UI.dateKey)?.dailyTarget || 1) : 1)
+        : (weekendGoal(sub, UI.dateKey) || 1);
     } else if (sub === "lr" || sub === "di" || sub === "varc") {
       const p = sub === "varc" ? varcPlan(UI.dateKey) : dilrPlan(UI.dateKey);
       const part = sub === "varc" ? p : (p && p[sub]);
@@ -402,17 +466,30 @@
     ${(() => {
       // each subject's tile shows a rotating topic to do today; reading is a simple 20-min tile
       const setLabel = (q) => { const n = Math.max(1, Math.round(q / 4)); return `${n} set${n > 1 ? "s" : ""} (${q} Qs)`; };
+      const wknd = isStudyWknd(UI.dateKey); // weekends show week-leftover (catch-up), never a fresh target
       const dp = dilrPlan(UI.dateKey), vp = varcPlan(UI.dateKey); // LR, DI, VARC are weighted rotations
       const tgts = ["qa", "lr", "di", "varc", "vocab"].map((sub) => {
         if (sub === "lr" || sub === "di") {
           if (!dp) return { sub, missing: true, goal: 0, done: 0, label: "load plan in Study tab", note: "" };
           const part = dp[sub];
-          if (dp.done || !part) return { sub, goal: 0, done: 0, label: "all done 🎉", note: "" };
+          if (wknd) {
+            const g = weekendGoal(sub, UI.dateKey);
+            if (g <= 0) return { sub, goal: 0, done: 0, label: "all clear ✓", note: "" };
+            const bd = trackBreakdown(sub, UI.dateKey, g);
+            return { sub, goal: bd.goal, done: bd.done, label: `${bd.goal} Qs to catch up`, breakdown: bd.parts };
+          }
+          if (dp.done || !part || part.target <= 0) return { sub, goal: 0, done: part && part.doneToday || 0, label: "all done 🎉", note: "" };
           return { sub, goal: part.target, done: part.doneToday, label: setLabel(part.target), note: part.current.ch.name };
         }
         if (sub === "varc") {
           if (!vp) return { sub, missing: true, goal: 0, done: 0, label: "load plan in Study tab", note: "" };
-          if (vp.done || !vp.current) return { sub, goal: 0, done: 0, label: "all done 🎉", note: "" };
+          if (wknd) {
+            const g = weekendGoal("varc", UI.dateKey);
+            if (g <= 0) return { sub, goal: 0, done: 0, label: "all clear ✓", note: "" };
+            const bd = trackBreakdown("varc", UI.dateKey, g);
+            return { sub, goal: bd.goal, done: bd.done, label: `${bd.goal} to catch up`, breakdown: bd.parts };
+          }
+          if (vp.done || !vp.current || vp.target <= 0) return { sub, goal: 0, done: vp.doneToday || 0, label: "all done 🎉", note: "" };
           return { sub, goal: vp.target, done: vp.doneToday, label: `${vp.target} exercise${vp.target > 1 ? "s" : ""}`, note: vp.current.ch.name };
         }
         const p = planFor(sub, UI.dateKey);
@@ -420,16 +497,20 @@
         if (p.done) return { sub, goal: 0, done: 0, label: "all done 🎉", note: "" };
         if (sub === "qa") {
           const bd = qaBreakdown(UI.dateKey);
-          return { sub, goal: bd.goal, done: bd.done, label: `${bd.goal} questions today`, breakdown: bd.parts };
+          if (wknd && bd.goal <= 0) return { sub, goal: 0, done: bd.done, label: "all clear ✓", note: "" };
+          return { sub, goal: bd.goal, done: bd.done, label: wknd ? `${bd.goal} Qs to catch up` : `${bd.goal} questions today`, breakdown: bd.parts };
         }
-        return { sub, goal: 1, done: p.doneToday, label: "1 session", note: p.current.ch.name };
+        // vocab
+        const vgoal = wknd ? (p.dailyTarget || 0) : 1;
+        if (wknd && vgoal <= 0) return { sub, goal: 0, done: p.doneToday, label: "all clear ✓", note: "" };
+        return { sub, goal: vgoal, done: p.doneToday, label: wknd ? `${vgoal} to catch up` : "1 session", note: p.current.ch.name };
       });
       tgts.push({ sub: "read", goal: 20, done: r.readMin || 0, label: "20 minutes", note: "daily reading", color: "var(--green)", soft: "var(--green-soft)" });
       const hitN = tgts.filter((t) => t.goal > 0 && t.done >= t.goal).length;
       const liveN = tgts.filter((t) => t.goal > 0).length;
       return `<div class="card span-3 targets-card">
         <h3>Today's Targets <span class="muted small">${hitN}/${liveN} done · tap a card to log</span></h3>
-        <p class="sub">The priority. One task per subject, tap to mark done, tap again to undo.</p>
+        <p class="sub">${wknd ? "🌿 Weekend — rest day. Study runs Mon–Fri; only your week's leftovers show here. Clear them or relax." : "The priority. One task per subject, tap to mark done, tap again to undo."}</p>
         <div class="tgt-grid">
           ${tgts.map((t) => {
             const m = t.sub === "read" ? { name: "Reading", color: t.color, soft: t.soft } : SUB_META[t.sub];
@@ -452,7 +533,6 @@
       // with each subject's remaining split (bifurcated) across the chapters/topics it comes from.
       const dow = parseKey(UI.dateKey).getDay();
       if (dow !== 0 && dow !== 6) return "";
-      const AIM = { qa: 25, lr: 8, di: 4, varc: 2, vocab: 1 };  // per day → ×7 = weekly
       const wk = weekKeys(parseKey(UI.dateKey)).filter((x) => x >= PLAN_START && x <= UI.dateKey);
       const sumChs = (chs) => wk.reduce((a, x) => { const qa = (S.days[x] || {}).qa || {}; return a + chs.reduce((b, c) => b + (qa[c.id] || 0), 0); }, 0);
       // spread `backlog` across chapters evenly (round-robin), capped at each chapter's remaining
@@ -463,18 +543,18 @@
         return items.filter((it) => it.n > 0).sort((a, b) => b.n - a.n);
       };
       const tracks = [
-        { name: "QA", unit: "Qs", color: "#7c8cf8", chs: S.chapters.filter((c) => (c.subject || "qa") === "qa"), aim: AIM.qa },
-        { name: "LR", unit: "Qs", color: "#f5a86b", chs: S.chapters.filter((c) => c.subject === "dilr" && !/^DI:/.test(c.name)), aim: AIM.lr },
-        { name: "DI", unit: "Qs", color: "#c98a2b", chs: S.chapters.filter((c) => c.subject === "dilr" && /^DI:/.test(c.name)), aim: AIM.di },
-        { name: "VARC", unit: "exercises", color: "#f48fb1", chs: S.chapters.filter((c) => c.subject === "varc"), aim: AIM.varc },
-        { name: "Vocab", unit: "sessions", color: "#4fc3b2", chs: S.chapters.filter((c) => c.subject === "vocab"), aim: AIM.vocab },
-      ].map((t) => { const done = sumChs(t.chs), target = t.aim * 7, rem = Math.max(0, target - done); return { ...t, done, target, rem, pct: target ? Math.min(100, Math.round((done / target) * 100)) : 0, segs: spread(t.chs, rem) }; });
+        { name: "QA", unit: "Qs", color: "#7c8cf8", chs: S.chapters.filter((c) => (c.subject || "qa") === "qa"), weekly: WEEKLY_AIM.qa },
+        { name: "LR", unit: "Qs", color: "#f5a86b", chs: S.chapters.filter((c) => c.subject === "dilr" && !/^DI:/.test(c.name)), weekly: WEEKLY_AIM.lr },
+        { name: "DI", unit: "Qs", color: "#c98a2b", chs: S.chapters.filter((c) => c.subject === "dilr" && /^DI:/.test(c.name)), weekly: WEEKLY_AIM.di },
+        { name: "VARC", unit: "exercises", color: "#f48fb1", chs: S.chapters.filter((c) => c.subject === "varc"), weekly: WEEKLY_AIM.varc },
+        { name: "Vocab", unit: "sessions", color: "#4fc3b2", chs: S.chapters.filter((c) => c.subject === "vocab"), weekly: WEEKLY_AIM.vocab },
+      ].map((t) => { const done = sumChs(t.chs), target = t.weekly, rem = Math.max(0, target - done); return { ...t, done, target, rem, pct: target ? Math.min(100, Math.round((done / target) * 100)) : 0, segs: spread(t.chs, rem) }; });
       const totRem = tracks.reduce((a, t) => a + t.rem, 0);
       const bar = (t) => // single-colour progress bar: filled = done, in the subject's own colour
         `<div class="dist-bar"><span class="seg" style="width:${t.pct}%;background:${t.color}"></span></div>`;
       return `<div class="card span-3 tint-orange">
         <h3>📚 Weekend Study Backlog <span class="muted small">${totRem === 0 ? "all clear — nice! 🎉" : totRem + " to clear this week"}</span></h3>
-        <p class="sub">This week's target is each subject's daily aim × 7. Below each bar is the remaining split across the chapters it's from — log on the tiles above.</p>
+        <p class="sub">Study runs Mon–Fri; this is whatever's still left for the week. Below each bar is the remaining split across the chapters it's from — log on the tiles above.</p>
         ${tracks.map((t) => `
           <div class="bl-block">
             <div class="bl-row"><span class="bl-name">${t.name}</span>
